@@ -22,7 +22,7 @@ def generate_shelf_nodes(coordinates):
     for z, y in coordinates:
         node = f"""
 RoCKInShelf {{
-  translation {y} {z} 0.1
+  translation {y} {z} 0
 }}
 """
         nodes.append(node)
