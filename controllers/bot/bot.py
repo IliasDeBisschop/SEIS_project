@@ -1,32 +1,49 @@
-"""bot controller."""
-
-# You may need to import some classes of the controller module. Ex:
-#  from controller import Robot, Motor, DistanceSensor
 from controller import Robot
 
-# create the Robot instance.
 robot = Robot()
 
-# get the time step of the current world.
+possible_devices = [
+    "LDS-01", "left wheel motor", "right wheel motor"]
 timestep = int(robot.getBasicTimeStep())
 
-# You should insert a getDevice-like function in order to get the
-# instance of a device of the robot. Something like:
-#  motor = robot.getDevice('motorname')
-#  ds = robot.getDevice('dsname')
-#  ds.enable(timestep)
+# Activeer de LiDAR-sensor
+lds = robot.getDevice("LDS-01")
+lds.enable(timestep)
 
-# Main loop:
-# - perform simulation steps until Webots is stopping the controller
+# Zoek de twee motoren (kan verschillen per robot)
+left_motor = robot.getDevice("left wheel motor")
+right_motor = robot.getDevice("right wheel motor")
+
+# Zet motoren op velocity mode
+left_motor.setPosition(float('inf'))
+right_motor.setPosition(float('inf'))
+
+# Stel snelheid in
+speed = 6.67  # pas aan naar wens
+
+left_motor.setVelocity(speed)
+right_motor.setVelocity(speed)
+
+# Drempelafstand voor het detecteren van een muur (in meters)
+threshold_distance = 1.0  # pas aan naar wens
+
+# Laat de simulatie lopen
 while robot.step(timestep) != -1:
-    # Read the sensors:
-    # Enter here functions to read sensor data, like:
-    #  val = ds.getValue()
-
-    # Process sensor data here.
-
-    # Enter here functions to send actuator commands, like:
-    #  motor.setPosition(10.0)
-    pass
-
-# Enter here exit cleanup code.
+    # Uitlezen van sensorgegevens
+    range_image = lds.getRangeImage()  # Haal de afstandswaarden op
+    
+    # Pak alleen de afstand recht voor de robot (middelste waarde)
+    front_distance = range_image[len(range_image) // 2]
+    print("Afstand vooraan:", front_distance)
+    
+    # Controleer of de afstand onder de drempelafstand ligt
+    if front_distance < threshold_distance:
+        # Stop de robot als er een muur wordt gedetecteerd
+        left_motor.setVelocity(0)
+        right_motor.setVelocity(0)
+        print("Muur recht voor! Robot gestopt.")
+        break
+    else:
+        # Blijf rijden als er geen muur is
+        left_motor.setVelocity(speed)
+        right_motor.setVelocity(speed)

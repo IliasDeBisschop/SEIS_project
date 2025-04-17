@@ -3,12 +3,24 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/TurtleBot3Burger.proto"
 
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.2184967531972468 -0.03845113318432769 0.9750798322184202 3.1103384925554876
-  position 25.480028049830224 -0.4384930820135935 12.007676818268454
+  orientation -0.5948983624085497 0.35692199576117484 0.7202101272166935 2.3258501728483827
+  position -6.586065231261794 -6.176959601595469 8.476605952063961
+}
+TurtleBot3Burger {
+  hidden translation_8 0 -0.08 0.033
+  hidden rotation_8 0 -1 0 1.3581462255982473
+  hidden translation_9 0 0.08 0.033
+  hidden rotation_9 -0.7781533257119727 2.469303331738526e-07 -0.6280743599951647 3.141588026279602
+  hidden translation_10 -0.081 0 0.004
+  hidden rotation_10 0.07118238409178922 -0.9970202676815981 0.02972631876172298 1.3795943869340213
+  translation -7.248508110548935 -4.821720000601876 -0.03109743001355008
+  rotation -0.012072854839772298 -0.999927116997089 8.288490670777173e-05 0.013271601929343528
+  controller "bot"
 }
 TexturedBackground {
 }
@@ -16,4 +28,6 @@ TexturedBackgroundLight {
 }
 RectangleArena {
   floorSize 15 10
+  floorTileSize 1 1
+  wallHeight 0.2
 }
