@@ -1,0 +1,20 @@
+# Use a Python base image
+FROM python:3.9-slim
+
+# Install Webots dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libxkbcommon-x11-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the controller code into the container
+COPY ../../controllers/bot/main.py /app/main.py
+
+# Install any Python dependencies (if required)
+# Example: RUN pip install -r requirements.txt
+
+# Run the Webots controller
+CMD ["python", "main.py"]

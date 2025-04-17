@@ -1,0 +1,14 @@
+# Use a Python base image
+FROM python:3.9-slim
+
+# Install Flask and Requests
+RUN pip install flask requests
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the server code into the container
+COPY main.py /app/main.py
+
+# Run the Flask server
+CMD ["python", "main.py"]
