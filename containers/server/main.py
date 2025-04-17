@@ -8,8 +8,8 @@ app = Flask(__name__)
 
 ROWS = 20  # Example: Total number of rows
 COLUMNS = 6  # Example: Total number of columns
-INTERVAL = 5  # Example: Frequency of task generation in seconds
-MAX_TASKS = 5  # Maximum number of tasks to generate per interval
+INTERVAL = 10  # Example: Frequency of task generation in seconds
+MAX_TASKS = 3  # Maximum number of tasks to generate per interval
 
 bot_rows = {
     "bot1": None,
@@ -41,6 +41,7 @@ def generate_tasks_at_interval():
         new_tasks = [generate_random_task() for _ in range(num_tasks)]
         tasks.extend(new_tasks)
         print(f"Generated {num_tasks} tasks: {new_tasks}")
+        print (f"Current tasks: {tasks}")
         time.sleep(INTERVAL)  # Wait for the next interval
 
 # Start the task generation in a separate thread
