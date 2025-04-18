@@ -21,7 +21,10 @@ async def handle_connection(websocket, path):
             slam.update(processed_data)
 
             # Generate motor commands based on SLAM results
-            motor_commands = slam.get_motor_commands()
+            motor_commands = {
+                "left_motor": 6.67,  # Example command
+                "right_motor": 6.67  # Example command
+            }
 
             # Send motor commands back to the bot
             await websocket.send(json.dumps(motor_commands))

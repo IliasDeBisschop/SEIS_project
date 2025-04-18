@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y \
 # Set the working directory
 WORKDIR /app
 
+# Copy the bot source code into the container
+COPY . /app/bot
+
 # Install Python dependencies
 COPY requirements.txt /app/requirements.txt
 RUN pip3 install --no-cache-dir -r /app/requirements.txt

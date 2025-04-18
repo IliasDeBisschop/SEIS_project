@@ -5,8 +5,6 @@ services:
     build:
       context: ./bot
       dockerfile: dockerfile
-    volumes:
-      - ./bot:/app/bot
     stdin_open: true
     tty: true
     ports:
