@@ -1,13 +1,13 @@
 import asyncio
 from lidar.preprocessing import preprocess_lidar_data
-from slam.gmapping import GMapping
+from bot.src.slam.mapping import Slam
 import websockets
 import json
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
     try:
-        slam = GMapping()  # Initialize the GMapping SLAM algorithm
+        slam = Slam()  # Initialize the GMapping SLAM algorithm
         while True:
             # Receive LiDAR data from the bot
             lidar_data = await websocket.recv()

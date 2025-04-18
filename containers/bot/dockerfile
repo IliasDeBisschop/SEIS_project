@@ -1,5 +1,5 @@
 # Use a Python base image
-FROM python:3.9-slim
+FROM python:3.8-slim
 
 # Set environment variables to avoid interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,6 +16,8 @@ WORKDIR /app
 
 # Copy the bot source code into the container
 COPY . /app/bot
+
+ENV PYTHONPATH=/app
 
 # Install Python dependencies
 COPY requirements.txt /app/requirements.txt
