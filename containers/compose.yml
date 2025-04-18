@@ -8,7 +8,7 @@ services:
     stdin_open: true
     tty: true
     ports:
-      - "5001:5000"  # Expose port 5000 in the container as 5001 on the host
+      - "5001:5001"  # Expose port 5000 in the container as 5001 on the host
 
   # bot2:
   #   build:

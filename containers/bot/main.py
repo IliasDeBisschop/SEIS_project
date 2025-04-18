@@ -1,6 +1,22 @@
 import asyncio
 import websockets
 import json
+import math
+from sensor_msgs.msg import LaserScan
+import rospy
+
+def preprocess_lidar_data(range_image):
+    """Convert LiDAR data from polar to Cartesian coordinates."""
+    points = []
+    angle_increment = 2 * math.pi / len(range_image)  # Assuming 360-degree LiDAR
+    for i, distance in enumerate(range_image):
+        if distance < 10.0:  # Ignore invalid or infinite values
+            angle = i * angle_increment
+            x = distance * math.cos(angle)
+            y = distance * math.sin(angle)
+            points.append((x, y))
+    return points
+
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
