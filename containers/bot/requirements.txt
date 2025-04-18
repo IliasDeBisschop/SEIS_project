@@ -1,3 +1,10 @@
 flask==2.3.2
 requests==2.31.0
 websockets==11.0.3
+numpy
+scipy
+matplotlib
+opencv-python
+scikit-learn
+filterpy
+pyyaml

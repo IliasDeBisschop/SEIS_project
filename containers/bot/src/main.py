@@ -1,37 +1,27 @@
 import asyncio
+from lidar.preprocessing import preprocess_lidar_data
+from slam.gmapping import GMapping
 import websockets
 import json
-import math
-from sensor_msgs.msg import LaserScan
-import rospy
-
-def preprocess_lidar_data(range_image):
-    """Convert LiDAR data from polar to Cartesian coordinates."""
-    points = []
-    angle_increment = 2 * math.pi / len(range_image)  # Assuming 360-degree LiDAR
-    for i, distance in enumerate(range_image):
-        if distance < 10.0:  # Ignore invalid or infinite values
-            angle = i * angle_increment
-            x = distance * math.cos(angle)
-            y = distance * math.sin(angle)
-            points.append((x, y))
-    return points
-
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
     try:
+        slam = GMapping()  # Initialize the GMapping SLAM algorithm
         while True:
             # Receive LiDAR data from the bot
             lidar_data = await websocket.recv()
             lidar_data = json.loads(lidar_data)
             print(f"Received LiDAR data: {lidar_data['lidar']}")
 
-            # Process LiDAR data and generate motor commands
-            motor_commands = {
-                "left_speed": 1.0,  # Example: Move forward
-                "right_speed": 1.0
-            }
+            # Preprocess LiDAR data
+            processed_data = preprocess_lidar_data(lidar_data['lidar'])
+
+            # Update SLAM with the processed data
+            slam.update(processed_data)
+
+            # Generate motor commands based on SLAM results
+            motor_commands = slam.get_motor_commands()
 
             # Send motor commands back to the bot
             await websocket.send(json.dumps(motor_commands))

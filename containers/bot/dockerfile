@@ -1,5 +1,5 @@
-# Use the official ROS Noetic base image
-FROM ros:noetic-ros-base
+# Use a Python base image
+FROM python:3.9-slim
 
 # Set environment variables to avoid interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -9,26 +9,17 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     libgl1-mesa-glx \
     libxkbcommon-x11-0 \
-    ros-noetic-sensor-msgs \
-    ros-noetic-geometry-msgs \
-    ros-noetic-tf \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app
 
-# Copy the controller code and requirements into the container
-COPY main.py /app/main.py
-COPY requirements.txt /app/requirements.txt
-
 # Install Python dependencies
+COPY requirements.txt /app/requirements.txt
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
-
-# Source ROS setup script
-RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 
 # Expose the port for communication with the bot
 EXPOSE 5001
 
-# Run the ROS-enabled bot controller
-CMD ["python3", "main.py"]
+# Run the bot controller
+CMD ["python3", "bot/src/main.py"]
