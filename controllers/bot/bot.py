@@ -1,60 +1,74 @@
-import socket
 from controller import Robot
+import struct
+import websocket
+import time
+import json
 
+# Initialize the Webots robot
 robot = Robot()
-
-possible_devices = [
-    "LDS-01", "left wheel motor", "right wheel motor"]
 timestep = int(robot.getBasicTimeStep())
 
-# Activeer de LiDAR-sensor
-lds = robot.getDevice("LDS-01")
+# Initialize devices
+lds = robot.getDevice("LDS-01")  # LiDAR sensor
 lds.enable(timestep)
 
-# Zoek de twee motoren (kan verschillen per robot)
 left_motor = robot.getDevice("left wheel motor")
 right_motor = robot.getDevice("right wheel motor")
-
-# Zet motoren op velocity mode
 left_motor.setPosition(float('inf'))
 right_motor.setPosition(float('inf'))
 
-# Socketconfiguratie
-HOST = '127.0.0.1'  # Serveradres
-PORT = 65432        # Poortnummer
+# WebSocket configuration
+WS_URL = "ws://127.0.0.1:5001"  # WebSocket server address
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-    client_socket.connect((HOST, PORT))
-    print(f"Verbonden met server op {HOST}:{PORT}")
-
-    # Laat de simulatie lopen
-    while robot.step(timestep) != -1:
-        # Uitlezen van sensorgegevens
-        range_image = lds.getRangeImage()  # Haal de afstandswaarden op
-        
-        # Pak alleen de afstand recht voor de robot (middelste waarde)
-        front_distance = range_image[len(range_image) // 2]
-        print("Afstand vooraan:", front_distance)
-        
-        # Stuur de afstand naar de server
-        client_socket.sendall(f"{front_distance}".encode('utf-8'))
-        
-        # Ontvang de snelheden van de server
-        data = client_socket.recv(1024)
-        if not data:
-            print("Verbinding met server verbroken.")
-            break
-        
-        # Pas de snelheden toe op de motoren
+def connect_to_container():
+    """Establish a WebSocket connection to the container."""
+    while True:
         try:
-            # Verwacht een string in het formaat "left_speed,right_speed"
-            print("Ontvangen snelheden van server:", data.decode('utf-8'))
-            speeds = data.decode('utf-8').split(',')
-            left_speed = float(speeds[0])
-            right_speed = float(speeds[1])
-            
-            left_motor.setVelocity(left_speed)
-            right_motor.setVelocity(right_speed)
-            print(f"Nieuwe snelheden ontvangen: left={left_speed}, right={right_speed}")
-        except (ValueError, IndexError):
-            print("Ongeldige snelheden ontvangen.")
+            ws = websocket.create_connection(WS_URL)
+            print(f"Connected to container at {WS_URL}")
+            return ws
+        except Exception as e:
+            print(f"Error connecting to container: {e}")
+            print("Retrying in 5 seconds...")
+            time.sleep(5)
+
+while True:
+    ws = connect_to_container()
+    try:
+        while robot.step(timestep) != -1:
+            # Read LiDAR data
+            range_image = [value if value != float('inf') else 10.0 for value in lds.getRangeImage()]
+
+            # Send LiDAR data to the container
+            try:
+                # Serialize the LiDAR data as JSON
+                lidar_data = json.dumps({"lidar": range_image})
+                ws.send(lidar_data)
+                print(f"Sent LiDAR data: {range_image}")
+            except Exception as e:
+                print(f"Error sending data to container: {e}")
+                break
+
+            # Receive motor commands from the container
+            try:
+                motor_data = ws.recv()
+                if not motor_data:
+                    print("Connection to container lost.")
+                    break
+
+                # Deserialize motor commands
+                motor_commands = json.loads(motor_data)
+                left_speed = motor_commands["left_speed"]
+                right_speed = motor_commands["right_speed"]
+
+                # Apply motor speeds
+                left_motor.setVelocity(left_speed)
+                right_motor.setVelocity(right_speed)
+            except Exception as e:
+                print(f"Error receiving motor commands: {e}")
+                break
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+    finally:
+        ws.close()
+        print("WebSocket closed. Reconnecting...")
