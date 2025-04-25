@@ -1,25 +1,14 @@
 import asyncio
 import websockets
 import json
-import math
-from sensor_msgs.msg import LaserScan
-import rospy
-
-def preprocess_lidar_data(range_image):
-    """Convert LiDAR data from polar to Cartesian coordinates."""
-    points = []
-    angle_increment = 2 * math.pi / len(range_image)  # Assuming 360-degree LiDAR
-    for i, distance in enumerate(range_image):
-        if distance < 10.0:  # Ignore invalid or infinite values
-            angle = i * angle_increment
-            x = distance * math.cos(angle)
-            y = distance * math.sin(angle)
-            points.append((x, y))
-    return points
+from localization import MonteCarloLocalization
 
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
+    # Initialize the localization system with the map
+    mcl = MonteCarloLocalization("output_image_processed.jpg", num_particles=100)
+
     try:
         while True:
             # Receive LiDAR data from the bot
@@ -27,7 +16,13 @@ async def handle_connection(websocket, path):
             lidar_data = json.loads(lidar_data)
             print(f"Received LiDAR data: {lidar_data['lidar']}")
 
-            # Process LiDAR data and generate motor commands
+            # Update localization with the LiDAR data
+            mcl.update_particles(lidar_data['lidar'])
+            mcl.resample_particles()
+            estimated_position = mcl.get_estimated_position()
+            print(f"Estimated position: {estimated_position}")
+
+            # Generate motor commands (placeholder)
             motor_commands = {
                 "left_speed": 1.0,  # Example: Move forward
                 "right_speed": 1.0
