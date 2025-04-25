@@ -17,9 +17,11 @@ RUN apt-get update && apt-get install -y \
 # Set the working directory
 WORKDIR /app
 
-# Copy the controller code and requirements into the container
+# Copy the controller code, map image, and requirements into the container
 COPY main.py /app/main.py
+COPY localization.py /app/localization.py
 COPY requirements.txt /app/requirements.txt
+COPY image_low_pixels.png /app/output_image_processed.jpg
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
