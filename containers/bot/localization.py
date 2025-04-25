@@ -3,6 +3,7 @@ import markov_clustering as mc
 import networkx as nx
 from scipy.sparse import csr_matrix  # Import for sparse matrix conversion
 import matplotlib.pyplot as plt  # Import for visualization
+from PIL import Image  # Import for image handling
 
 class MarkovClusteringLocalization:
     def __init__(self, map_image_path):
@@ -14,10 +15,17 @@ class MarkovClusteringLocalization:
         """Build a graph from LiDAR data."""
         self.graph = nx.Graph()
         for i, distance in enumerate(lidar_data):
-            if distance < 10.0:  # Ignore invalid or infinite values
-                # Add nodes and edges based on LiDAR data
-                self.graph.add_node(i, pos=(distance * np.cos(i), distance * np.sin(i)))
-                if i > 0:
+            if distance > 0 and distance < 10.0:  # Ignore invalid, zero, or infinite values
+                # Calculate position
+                angle = (i * 2 * np.pi / 360) - np.pi
+                x = distance * np.cos(angle)
+                y = distance * np.sin(angle)
+
+                # Add node with position
+                self.graph.add_node(i, pos=(x, y))
+                
+                # Add edge to the previous node if it exists
+                if i > 0 and self.graph.has_node(i - 1):
                     self.graph.add_edge(i - 1, i, weight=1.0 / distance)
 
     def perform_clustering(self):
@@ -43,26 +51,37 @@ class MarkovClusteringLocalization:
         y = np.mean([pos[1] for pos in positions])
         return x, y
 
-    def visualize_localization(self, clusters):
-        """Visualize the graph and clusters."""
-        if self.graph is None:
-            raise ValueError("Graph has not been built yet.")
+    def visualize_localization(self, clusters, image_path="image_low_pixels.png", output_path="localization_visualization.png"):
+        """Visualize the estimated position on a given image."""
+        # Load the image
+        try:
+            img = Image.open(image_path)
+        except FileNotFoundError:
+            raise ValueError(f"Image file '{image_path}' not found.")
         
-        # Plot the graph
+        # Convert the image to a numpy array for plotting
+        img_array = np.array(img)
+
+        # Plot the image
         plt.figure(figsize=(10, 10))
-        pos = nx.get_node_attributes(self.graph, 'pos')  # Get node positions
-        nx.draw(self.graph, pos, node_size=50, with_labels=False, alpha=0.7)
+        plt.imshow(img_array, extent=[0, img_array.shape[1], 0, img_array.shape[0]])
+        
+        # Estimate the position
+        x, y = self.get_estimated_position(clusters)
+        
+        # Adjust coordinates if necessary (e.g., flip y-axis for image coordinates)
+        y = img_array.shape[0] - y  # Flip y-axis for image coordinates
+        
+        # Plot the estimated position
+        plt.scatter([x], [y], color='red', label='Estimated Position', s=100, marker='x')
 
-        # Highlight clusters
-        colors = plt.cm.rainbow(np.linspace(0, 1, len(clusters)))
-        for cluster, color in zip(clusters, colors):
-            cluster_positions = [pos[node] for node in cluster]
-            cluster_x = [p[0] for p in cluster_positions]
-            cluster_y = [p[1] for p in cluster_positions]
-            plt.scatter(cluster_x, cluster_y, color=color, label=f"Cluster {clusters.index(cluster)}", s=100)
-
+        # Add labels and legend
+        plt.xlabel("X Coordinate")
+        plt.ylabel("Y Coordinate")
         plt.title("Localization Visualization")
-        plt.xlabel("X Position")
-        plt.ylabel("Y Position")
         plt.legend()
-        plt.show()
+        plt.grid(False)  # Disable grid for image-based visualization
+
+        # Save the visualization
+        plt.savefig(output_path)
+        plt.close()

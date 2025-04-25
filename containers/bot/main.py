@@ -10,20 +10,13 @@ async def handle_connection(websocket, path):
     # Initialize the localization system
     mcl = MarkovClusteringLocalization("output_image_processed.jpg")
 
-    async def visualize_task(clusters):
-        """Run the visualization in a separate asyncio task."""
-        # Voorbeeld: Maak een eenvoudige plot
-        plt.figure()
-        plt.scatter([c[0] for c in clusters], [c[1] for c in clusters])
-        plt.title("Localization Clusters")
-        plt.savefig("/output/visualization.png")  # Opslaan in een gedeeld volume
-        plt.close()
+       
     try:
         while True:
             # Receive LiDAR data from the bot
             lidar_data = await websocket.recv()
             lidar_data = json.loads(lidar_data)
-            print(f"Received LiDAR data: {lidar_data['lidar']}")
+            print(f"Received LiDAR data size: {len(lidar_data['lidar'])}")
 
             # Build graph and perform clustering
             mcl.build_graph_from_lidar(lidar_data['lidar'])
@@ -31,8 +24,10 @@ async def handle_connection(websocket, path):
             estimated_position = mcl.get_estimated_position(clusters)
             print(f"Estimated position: {estimated_position}")
 
-            # Visualize localization in a separate task
-            visualize_task(clusters)
+             # Visualize localization and save to file
+            output_path = "localization_visualization.png"
+            mcl.visualize_localization(clusters, output_path=output_path)
+            print(f"Localization visualization saved to {output_path}")
 
             # Generate motor commands (placeholder)
             motor_commands = {
