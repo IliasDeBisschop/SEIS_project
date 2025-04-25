@@ -1,14 +1,23 @@
 import asyncio
 import websockets
 import json
-from localization import MonteCarloLocalization
+from localization import MarkovClusteringLocalization
+import matplotlib.pyplot as plt
 
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
-    # Initialize the localization system with the map
-    mcl = MonteCarloLocalization("output_image_processed.jpg", num_particles=100)
+    # Initialize the localization system
+    mcl = MarkovClusteringLocalization("output_image_processed.jpg")
 
+    async def visualize_task(clusters):
+        """Run the visualization in a separate asyncio task."""
+        # Voorbeeld: Maak een eenvoudige plot
+        plt.figure()
+        plt.scatter([c[0] for c in clusters], [c[1] for c in clusters])
+        plt.title("Localization Clusters")
+        plt.savefig("/output/visualization.png")  # Opslaan in een gedeeld volume
+        plt.close()
     try:
         while True:
             # Receive LiDAR data from the bot
@@ -16,11 +25,14 @@ async def handle_connection(websocket, path):
             lidar_data = json.loads(lidar_data)
             print(f"Received LiDAR data: {lidar_data['lidar']}")
 
-            # Update localization with the LiDAR data
-            mcl.update_particles(lidar_data['lidar'])
-            mcl.resample_particles()
-            estimated_position = mcl.get_estimated_position()
+            # Build graph and perform clustering
+            mcl.build_graph_from_lidar(lidar_data['lidar'])
+            clusters = mcl.perform_clustering()
+            estimated_position = mcl.get_estimated_position(clusters)
             print(f"Estimated position: {estimated_position}")
+
+            # Visualize localization in a separate task
+            visualize_task(clusters)
 
             # Generate motor commands (placeholder)
             motor_commands = {

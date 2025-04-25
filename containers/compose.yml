@@ -3,12 +3,12 @@ services:
     build:
       context: ./bot
       dockerfile: dockerfile
-    volumes:
-      - ../controllers:/app/controllers
     stdin_open: true
     tty: true
     ports:
       - "5001:5001"  # Expose port 5000 in the container as 5001 on the host
+    volumes:
+      - ./output:/output  # Mount the 'output' folder to share visualizations with the host
 
   # bot2:
   #   build:

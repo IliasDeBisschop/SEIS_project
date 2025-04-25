@@ -1,73 +1,68 @@
-import math
-import cv2
 import numpy as np
+import markov_clustering as mc
+import networkx as nx
+from scipy.sparse import csr_matrix  # Import for sparse matrix conversion
+import matplotlib.pyplot as plt  # Import for visualization
 
-pixel_size = 0.3  # Size of each pixel in meters (example value, adjust as needed)
+class MarkovClusteringLocalization:
+    def __init__(self, map_image_path):
+        # Load the map image (placeholder, as clustering doesn't directly use the map)
+        self.map_image_path = map_image_path
+        self.graph = None
 
-
-class MonteCarloLocalization:
-    def __init__(self, map_image_path, num_particles=100):
-        # Load the map image
-        self.map = cv2.imread(map_image_path, cv2.IMREAD_GRAYSCALE)
-        self.map = cv2.threshold(self.map, 127, 255, cv2.THRESH_BINARY)[1]  # Convert to binary
-        self.num_particles = num_particles
-        self.particles = self.initialize_particles()
-
-    def initialize_particles(self):
-        """Initialize particles randomly on the map."""
-        particles = []
-        height, width = self.map.shape
-        for _ in range(self.num_particles):
-            while True:
-                x = np.random.randint(0, width)
-                y = np.random.randint(0, height)
-                theta = np.random.uniform(0, 2 * math.pi)
-                if self.map[y, x] == 255:  # Ensure the particle is in free space
-                    particles.append((x, y, theta))
-                    break
-        return particles
-
-    def update_particles(self, lidar_data):
-        weights = []
-        for particle in self.particles:
-            x, y, theta = particle
-            weight = self.calculate_particle_weight(x, y, theta, lidar_data)
-            weights.append(weight)
-
-        # Normalize weights
-        total_weight = sum(weights)
-        if total_weight > 0:
-            weights = [w / total_weight for w in weights]
-        else:
-            weights = [1 / len(self.particles)] * len(self.particles)
-
-        # Update particles with weights
-        self.particles = [(p[0], p[1], p[2], w) for p, w in zip(self.particles, weights)]
-
-    def calculate_particle_weight(self, x, y, theta, lidar_data):
-        """Calculate the weight of a particle based on LiDAR data."""
-        weight = 1.0
+    def build_graph_from_lidar(self, lidar_data):
+        """Build a graph from LiDAR data."""
+        self.graph = nx.Graph()
         for i, distance in enumerate(lidar_data):
             if distance < 10.0:  # Ignore invalid or infinite values
-                # Calculate the expected distance from the particle's position
-                expected_distance = self.get_expected_distance(x, y, theta, i)
-                # Compare the expected distance with the actual distance
-                weight *= math.exp(-((distance - expected_distance) ** 2) / (2 * 0.5 ** 2))  # Gaussian
-        return weight
+                # Add nodes and edges based on LiDAR data
+                self.graph.add_node(i, pos=(distance * np.cos(i), distance * np.sin(i)))
+                if i > 0:
+                    self.graph.add_edge(i - 1, i, weight=1.0 / distance)
 
-    def get_expected_distance(self, x, y, theta, lidar_angle_index):
-        """Calculate the expected distance to an obstacle from a particle's position."""
-        # Placeholder: Implement raycasting or lookup on the map
-        return 5.0  # Example: Return a constant value for now
+    def perform_clustering(self):
+        """Perform Markov Clustering on the graph."""
+        if self.graph is None:
+            raise ValueError("Graph has not been built yet.")
+        
+        # Convert the graph to a sparse array and then to a sparse matrix
+        sparse_array = nx.to_scipy_sparse_array(self.graph)
+        matrix = csr_matrix(sparse_array)  # Convert to a sparse matrix
+        
+        # Run Markov Clustering
+        result = mc.run_mcl(matrix)
+        clusters = mc.get_clusters(result)
+        return clusters
 
-    def resample_particles(self):
-        """Resample particles based on their weights."""
-        # Placeholder: Implement particle resampling
-        pass
+    def get_estimated_position(self, clusters):
+        """Estimate the robot's position based on clusters."""
+        # Placeholder: Use the largest cluster's centroid as the estimated position
+        largest_cluster = max(clusters, key=len)
+        positions = [self.graph.nodes[node]['pos'] for node in largest_cluster]
+        x = np.mean([pos[0] for pos in positions])
+        y = np.mean([pos[1] for pos in positions])
+        return x, y
 
-    def get_estimated_position(self):
-        """Estimate the robot's position based on the particles."""
-        x = np.mean([p[0] for p in self.particles])
-        y = np.mean([p[1] for p in self.particles])
-        theta = np.mean([p[2] for p in self.particles])
-        return x, y, theta
+    def visualize_localization(self, clusters):
+        """Visualize the graph and clusters."""
+        if self.graph is None:
+            raise ValueError("Graph has not been built yet.")
+        
+        # Plot the graph
+        plt.figure(figsize=(10, 10))
+        pos = nx.get_node_attributes(self.graph, 'pos')  # Get node positions
+        nx.draw(self.graph, pos, node_size=50, with_labels=False, alpha=0.7)
+
+        # Highlight clusters
+        colors = plt.cm.rainbow(np.linspace(0, 1, len(clusters)))
+        for cluster, color in zip(clusters, colors):
+            cluster_positions = [pos[node] for node in cluster]
+            cluster_x = [p[0] for p in cluster_positions]
+            cluster_y = [p[1] for p in cluster_positions]
+            plt.scatter(cluster_x, cluster_y, color=color, label=f"Cluster {clusters.index(cluster)}", s=100)
+
+        plt.title("Localization Visualization")
+        plt.xlabel("X Position")
+        plt.ylabel("Y Position")
+        plt.legend()
+        plt.show()
