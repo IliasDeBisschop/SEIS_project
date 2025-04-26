@@ -216,8 +216,9 @@ class MarkovClusteringLocalization:
         # Convert the graph_lines_visualization to grayscale
         graph_lines_gray = cv2.cvtColor(graph_lines_image, cv2.COLOR_BGR2GRAY)
 
-        # Invert the colors of the graph_lines_visualization
-        graph_lines_gray_inverted = graph_lines_gray
+        # Create binary masks where black pixels are 1 and others are 0
+        map_mask = (map_image_gray == 0).astype(np.uint8)
+        graph_mask = (graph_lines_gray == 0).astype(np.uint8)
 
         # Initialize variables for the best match
         best_match = None
@@ -227,25 +228,29 @@ class MarkovClusteringLocalization:
         best_top_left = None
 
         # Iterate through scales and rotations
-        for scale in np.linspace(0.5, 10, 100):  # Test scales from 0.5x to 2.0x
-            for angle in range(0, 360, 15):  # Test rotations in 15-degree increments
-                # Scale the graph_lines_visualization
-                scaled_image = cv2.resize(graph_lines_gray_inverted, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+        for scale in np.linspace(0.5, 3.0, 50):  # Test scales from 0.5x to 2.0x
+            for angle in range(0, 360, 360):  # Test rotations in 15-degree increments
+                # Scale the graph_lines_visualization mask
+                scaled_mask = cv2.resize(graph_mask, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
 
-                # Rotate the scaled image
-                h, w = scaled_image.shape
+                # Rotate the scaled mask
+                h, w = scaled_mask.shape
                 center = (w // 2, h // 2)
                 rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-                rotated_image = cv2.warpAffine(scaled_image, rotation_matrix, (w, h))
+                rotated_mask = cv2.warpAffine(scaled_mask, rotation_matrix, (w, h))
 
-                # Perform template matching
-                result = cv2.matchTemplate(map_image_gray, rotated_image, cv2.TM_CCOEFF_NORMED)
+                # Check if the rotated mask is smaller than the map mask
+                if rotated_mask.shape[0] > map_mask.shape[0] or rotated_mask.shape[1] > map_mask.shape[1]:
+                    continue  # Skip this iteration if the template is too large
+
+                # Perform template matching using the binary masks
+                result = cv2.matchTemplate(map_mask, rotated_mask, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, max_loc = cv2.minMaxLoc(result)
 
                 # Update the best match if the current one is better
                 if max_val > best_val:
                     best_val = max_val
-                    best_match = rotated_image
+                    best_match = rotated_mask
                     best_scale = scale
                     best_angle = angle
                     best_top_left = max_loc
@@ -260,7 +265,7 @@ class MarkovClusteringLocalization:
 
         # Overlay the best match on the map
         overlay = map_image.copy()
-        overlay[top_left[1]:top_left[1] + h, top_left[0]:top_left[0] + w] = cv2.cvtColor(best_match, cv2.COLOR_GRAY2BGR)
+        overlay[top_left[1]:top_left[1] + h, top_left[0]:top_left[0] + w] = cv2.cvtColor(best_match * 255, cv2.COLOR_GRAY2BGR)
 
         # Get the robot's position (node ID 1000)
         robot_x, robot_y = self.graph.nodes[1000]['pos']
@@ -331,7 +336,7 @@ class MarkovClusteringLocalization:
             raise ValueError("Graph has not been built yet.")
 
         # Create a blank image for visualization
-        map_image = np.zeros((500 * upscale_factor, 500 * upscale_factor, 3), dtype=np.uint8)
+        map_image = np.ones((500 * upscale_factor, 500 * upscale_factor, 3), dtype=np.uint8) * 255  # White background
 
         # Get the robot's position (node ID 1000)
         robot_x, robot_y = self.graph.nodes[1000]['pos']
@@ -350,7 +355,7 @@ class MarkovClusteringLocalization:
             y = int((-y * upscale_factor) + map_image.shape[0] // 2)
 
             # Draw the point as a filled circle
-            cv2.circle(map_image, (x, y), point_size, (255, 0, 0), -1)  # Blue dot for LiDAR points
+            cv2.circle(map_image, (x, y), point_size, (0, 0, 0), -1)  # Blue dot for LiDAR points
 
         # Save the visualization
         cv2.imwrite(output_path, map_image)
