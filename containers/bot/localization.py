@@ -193,53 +193,91 @@ class MarkovClusteringLocalization:
         plt.show()
 
     def visualize_localization(self, lidar_data, output_path="localization_visualization.png"):
-        """Visualize the LiDAR data and graph on the map."""
+        """
+        Visualize the robot's position on the map by aligning and overlaying the graph_lines_visualization image.
+        """
         if self.graph is None:
             raise ValueError("Graph has not been built yet.")
 
         # Load the map image
-        map_image = cv2.imread("image_low_pixels.png", cv2.IMREAD_COLOR)
+        map_image = cv2.imread(self.map_image_path, cv2.IMREAD_COLOR)
         if map_image is None:
-            raise FileNotFoundError("Map image 'image_low_pixels.png' not found or cannot be read.")
+            raise FileNotFoundError(f"Map image '{self.map_image_path}' not found or cannot be read.")
 
-        # Upscale the map for better visualization
-        upscale_factor = 1
-        map_image = cv2.resize(map_image, (map_image.shape[1] * upscale_factor, map_image.shape[0] * upscale_factor), interpolation=cv2.INTER_NEAREST)
+        # Load the graph_lines_visualization image
+        graph_lines_image_path = "./output/graph_lines_visualization.png"
+        graph_lines_image = cv2.imread(graph_lines_image_path, cv2.IMREAD_UNCHANGED)
+        if graph_lines_image is None:
+            raise FileNotFoundError(f"Graph lines visualization image '{graph_lines_image_path}' not found or cannot be read.")
+
+        # Convert the map image to grayscale for template matching
+        map_image_gray = cv2.cvtColor(map_image, cv2.COLOR_BGR2GRAY)
+
+        # Convert the graph_lines_visualization to grayscale
+        graph_lines_gray = cv2.cvtColor(graph_lines_image, cv2.COLOR_BGR2GRAY)
+
+        # Invert the colors of the graph_lines_visualization
+        graph_lines_gray_inverted = graph_lines_gray
+
+        # Initialize variables for the best match
+        best_match = None
+        best_val = -1
+        best_scale = 1.0
+        best_angle = 0
+        best_top_left = None
+
+        # Iterate through scales and rotations
+        for scale in np.linspace(0.5, 10, 100):  # Test scales from 0.5x to 2.0x
+            for angle in range(0, 360, 15):  # Test rotations in 15-degree increments
+                # Scale the graph_lines_visualization
+                scaled_image = cv2.resize(graph_lines_gray_inverted, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+
+                # Rotate the scaled image
+                h, w = scaled_image.shape
+                center = (w // 2, h // 2)
+                rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+                rotated_image = cv2.warpAffine(scaled_image, rotation_matrix, (w, h))
+
+                # Perform template matching
+                result = cv2.matchTemplate(map_image_gray, rotated_image, cv2.TM_CCOEFF_NORMED)
+                _, max_val, _, max_loc = cv2.minMaxLoc(result)
+
+                # Update the best match if the current one is better
+                if max_val > best_val:
+                    best_val = max_val
+                    best_match = rotated_image
+                    best_scale = scale
+                    best_angle = angle
+                    best_top_left = max_loc
+
+        print(f"Best match value: {best_val}, Scale: {best_scale}, Angle: {best_angle}")
+        if best_val < 0.005:  # Adjust threshold as needed
+            raise ValueError("Low match quality. Ensure the graph_lines_visualization matches the map.")
+
+        # Get the top-left corner of the best match
+        top_left = best_top_left
+        h, w = best_match.shape
+
+        # Overlay the best match on the map
+        overlay = map_image.copy()
+        overlay[top_left[1]:top_left[1] + h, top_left[0]:top_left[0] + w] = cv2.cvtColor(best_match, cv2.COLOR_GRAY2BGR)
 
         # Get the robot's position (node ID 1000)
         robot_x, robot_y = self.graph.nodes[1000]['pos']
-        robot_x = int((robot_x * upscale_factor) + map_image.shape[1] // 2)
-        robot_y = int((-robot_y * upscale_factor) + map_image.shape[0] // 2)
+        robot_x = int(robot_x + map_image.shape[1] // 2)
+        robot_y = int(-robot_y + map_image.shape[0] // 2)
 
-        # Draw the robot's position
-        cv2.circle(map_image, (robot_x, robot_y), 5, (0, 0, 255), -1)  # Red dot for the bot
-
-        # Map LiDAR data onto the map
-        for i, distance in enumerate(lidar_data):
-            if distance > 0 and distance < 10.0:  # Ignore invalid or infinite values
-                # Calculate angle in radians
-                angle = (i * 2 * np.pi / 360) - np.pi
-
-                # Convert polar coordinates to Cartesian coordinates
-                x = distance * np.cos(angle)
-                y = distance * np.sin(angle)
-
-                # Scale and translate the coordinates to match the map
-                x = int((x * upscale_factor) + map_image.shape[1] // 2)
-                y = int((-y * upscale_factor) + map_image.shape[0] // 2)
-
-                # Draw a line from the robot to the LiDAR point
-                cv2.line(map_image, (robot_x, robot_y), (x, y), (0, 255, 0), 1)  # Green line for LiDAR
-
-                # Draw the LiDAR point
-                cv2.circle(map_image, (x, y), 2, (255, 0, 0), -1)  # Blue dot for LiDAR point
+        # Draw the robot's position on the overlay
+        cv2.circle(overlay, (robot_x, robot_y), 5, (0, 0, 255), -1)  # Red dot for the bot
 
         # Save the visualization
-        cv2.imwrite(output_path, map_image)
-        print(f"Localization visualization saved to {output_path}")
+        if not cv2.imwrite(output_path, overlay):
+            print(f"Failed to save {output_path}")
+        else:
+            print(f"Localization visualization saved to {output_path}")
 
         # Optionally display the visualization
-        plt.imshow(cv2.cvtColor(map_image, cv2.COLOR_BGR2RGB))
+        plt.imshow(cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB))
         plt.title("Localization Visualization on Map")
         plt.axis("off")
         plt.show()
@@ -250,7 +288,7 @@ class MarkovClusteringLocalization:
             raise ValueError("Graph has not been built yet.")
 
         # Create a blank image for visualization
-        map_image = np.zeros((500 * upscale_factor, 500 * upscale_factor, 3), dtype=np.uint8)
+        map_image = np.ones((500 * upscale_factor, 500 * upscale_factor, 3), dtype=np.uint8) * 255  # All pixels initialized to white
 
         # Get the robot's position (node ID 1000)
         robot_x, robot_y = self.graph.nodes[1000]['pos']
@@ -263,8 +301,8 @@ class MarkovClusteringLocalization:
         # Get the lines from the graph
         lines = self.detect_lines_in_graph()
 
-        # Define the color for all lines (blue)
-        color = ( 0,255, 0)  # Blue
+        # Define the color for all lines (white)
+        color = ( 0,0, 0)  # white
 
         # Draw each line with the same color and increased thickness
         for line in lines:
