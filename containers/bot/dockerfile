@@ -17,11 +17,15 @@ RUN apt-get update && apt-get install -y \
 # Set the working directory
 WORKDIR /app
 
-# Copy the controller code, map image, and requirements into the container
-COPY . /app/
-RUN mkdir -p /app/output
+# Copy only requirements.txt first
+COPY requirements.txt /app/requirements.txt
+
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
+
+# Copy the rest of the application
+COPY . /app/
+RUN mkdir -p /app/output
 
 # Source ROS setup script
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc

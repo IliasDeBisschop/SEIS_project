@@ -32,18 +32,18 @@ services:
   #   ports:
   #     - "5003:5000"  # Expose port 5000 in the container as 5003 on the host
 
-  server:
-    build:
-      context: ./server
-      dockerfile: dockerfile
-    stdin_open: true
-    tty: true
-    ports:
-      - "5000:5000"  # Expose port 5000 for the server
-    depends_on:
-      - bot1
-      # - bot2
-      # - bot3
+  # server:
+  #   build:
+  #     context: ./server
+  #     dockerfile: dockerfile
+  #   stdin_open: true
+  #   tty: true
+  #   ports:
+  #     - "5000:5000"  # Expose port 5000 for the server
+  #   depends_on:
+  #     - bot1
+  #     # - bot2
+  #     # - bot3
 volumes:
   bot1_output:
     
