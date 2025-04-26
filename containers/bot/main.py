@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 async def handle_connection(websocket, path):
     print("Bot connected.")
     # Initialize the localization system
-    mcl = MarkovClusteringLocalization("output_image_processed.jpg")
+    mcl = MarkovClusteringLocalization("image_low_pixels.png")
 
        
     try:
@@ -25,7 +25,7 @@ async def handle_connection(websocket, path):
             print(f"Estimated position: {estimated_position}")
 
              # Visualize localization and save to file
-            output_path = "localization_visualization.png"
+            output_path = "./output/localization_visualization.png"
             mcl.visualize_localization(clusters, output_path=output_path)
             print(f"Localization visualization saved to {output_path}")
 
@@ -40,7 +40,9 @@ async def handle_connection(websocket, path):
     except websockets.ConnectionClosed:
         print("Connection to bot lost.")
     except Exception as e:
+        import traceback
         print(f"Error: {e}")
+        traceback.print_exc()  # Log de volledige stacktrace
 
 # Start the WebSocket server
 start_server = websockets.serve(handle_connection, "0.0.0.0", 5001)

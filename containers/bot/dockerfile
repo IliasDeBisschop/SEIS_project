@@ -19,6 +19,7 @@ WORKDIR /app
 
 # Copy the controller code, map image, and requirements into the container
 COPY . /app/
+RUN mkdir -p /app/output
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
 
