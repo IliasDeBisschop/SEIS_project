@@ -1,33 +1,46 @@
 import asyncio
 import websockets
 import json
-from localization import MarkovClusteringLocalization
+from localization import LocalizationInterface
 import matplotlib.pyplot as plt
+import math
+
+# Define the process_lidar_data function
+def process_lidar_data(lidar_data):
+    """
+    Processes raw LiDAR data into a list of tuples (distance, angle).
+    This is a placeholder implementation.
+    """
+    lidar_tuples = []
+    for i, distance in enumerate(lidar_data):
+        angle = (i * (360 / len(lidar_data))) - 90
+        if angle < 0:
+            angle += 360
+        lidar_tuples.append((distance, angle))
+    return lidar_tuples
 
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
     # Initialize the localization system
-    mcl = MarkovClusteringLocalization("image_low_pixels.png")
-
+    localization = LocalizationInterface("image_low_pixels.png", num_particles=100)
        
     try:
-        while True:
             # Receive LiDAR data from the bot
             lidar_data = await websocket.recv()
             lidar_data = json.loads(lidar_data)
-            print(f"Received LiDAR data size: {len(lidar_data['lidar'])}")
+
+            # Process LiDAR data
+            lidar_tuples = process_lidar_data(lidar_data['lidar'])
 
             # Build graph and perform clustering
-            mcl.build_graph_from_lidar(lidar_data['lidar'])
-            clusters = mcl.perform_clustering()
-            estimated_position = mcl.get_estimated_position(clusters)
-            print(f"Estimated position: {estimated_position}")
+            estimated_position = localization.process_lidar_data(lidar_tuples)
+            print(f"Geschatte positie: x={estimated_position[0]:.2f}, y={estimated_position[1]:.2f}, theta={math.degrees(estimated_position[2]):.2f} graden")
 
-             # Visualize localization and save to file
+            # Sla de visualisatie op
             output_path = "./output/localization_visualization.png"
-            mcl.visualize_localization(clusters, output_path=output_path)
             print(f"Localization visualization saved to {output_path}")
+            localization.save_visualization(output_path)
 
             # Generate motor commands (placeholder)
             motor_commands = {

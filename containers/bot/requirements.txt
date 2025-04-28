@@ -6,3 +6,4 @@ numpy==1.24.3  # For numerical computations
 markov-clustering==0.0.6.dev0  # Specify the correct version for clustering
 networkx==3.0  # For graph operations
 matplotlib==3.7.1  # For visualization
+scikit-image==0.21.0

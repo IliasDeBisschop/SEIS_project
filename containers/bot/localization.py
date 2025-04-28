@@ -1,99 +1,176 @@
+import cv2
 import numpy as np
-import markov_clustering as mc
-import networkx as nx
-from scipy.sparse import csr_matrix  # Import for sparse matrix conversion
-import matplotlib.pyplot as plt  # Import for visualization
-from PIL import Image  # Import for image handling
+import math
+import random
 
-class MarkovClusteringLocalization:
-    def __init__(self, map_image_path):
-        # Load the map image (placeholder, as clustering doesn't directly use the map)
-        self.map_image_path = map_image_path
-        self.graph = None
+# Schaalfactor (0.05m per pixel)
+SCALE = 0.05
 
-    def build_graph_from_lidar(self, lidar_data):
-        """Build a graph from LiDAR data."""
-        self.graph = nx.Graph()
-        for i, distance in enumerate(lidar_data):
-            if distance > 0 and distance < 10.0:  # Ignore invalid, zero, or infinite values
-                try:
-                    # Calculate angle in radians
-                    angle = (i * 2 * np.pi / 360) - np.pi
-                    
-                    # Calculate position
-                    x = distance * np.cos(angle)
-                    y = distance * np.sin(angle)
+# Laad de map en converteer naar een binair grid
+def load_map(filepath):
+    map_image = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
+    _, binary_map = cv2.threshold(map_image, 127, 1, cv2.THRESH_BINARY_INV)
+    return binary_map, map_image
 
-                    # Add node with position
-                    self.graph.add_node(i, pos=(x, y))
-                    
-                    # Add edge to the previous node if it exists
-                    if i > 0 and self.graph.has_node(i - 1):
-                        self.graph.add_edge(i - 1, i, weight=1.0 / distance)
-                except Exception as e:
-                    print(f"Error processing node {i}: {e}")
-                    raise
+# Converteer LiDAR-data naar (x, y) coördinaten in wereldruimte
+def lidar_to_points(lidar_data, robot_position, robot_orientation):
+    points = []
+    for angle, distance in enumerate(lidar_data):
+        if distance < 10.0:  # Alleen geldige metingen
+            rad = math.radians(angle) + robot_orientation
+            x = robot_position[0] + distance * math.cos(rad)
+            y = robot_position[1] + distance * math.sin(rad)
+            points.append((x, y))
+    return points
 
-    def perform_clustering(self):
-        """Perform Markov Clustering on the graph."""
-        if self.graph is None:
-            raise ValueError("Graph has not been built yet.")
-        
-        try:
-            # Convert the graph to a sparse array and then to a sparse matrix
-            # Debugging sparse matrix
-            sparse_array = nx.to_scipy_sparse_array(self.graph)
-            matrix = csr_matrix(sparse_array)  # Convert to a sparse matrix
-            
-            # Run Markov Clustering
-            result = mc.run_mcl(matrix)
-            clusters = mc.get_clusters(result)
-            print(f"Clusters found: {clusters}")
-            return clusters
-        except Exception as e:
-            print(f"Error during clustering: {e}")
-            raise
+# Partikelklasse voor Monte Carlo Localization
+class Particle:
+    def __init__(self, x, y, theta, weight=1.0):
+        self.x = x
+        self.y = y
+        self.theta = theta
+        self.weight = weight
 
-    def get_estimated_position(self, clusters):
-        """Estimate the robot's position based on clusters."""
-        largest_cluster = max(clusters, key=len)
-        # Filter nodes that exist in the graph
-        valid_nodes = [node for node in largest_cluster if node in self.graph.nodes]
-        missing_nodes = [node for node in largest_cluster if node not in self.graph.nodes]
-        if missing_nodes:
-            print(f"Missing nodes: {missing_nodes}")
-        
-        if not valid_nodes:
-            raise ValueError("No valid nodes found in the largest cluster.")
-        
-        positions = [self.graph.nodes[node]['pos'] for node in valid_nodes]
-        x = np.mean([pos[0] for pos in positions])
-        y = np.mean([pos[1] for pos in positions])
-        return x, y
+# Bereken de waarschijnlijkheid van een partikel op basis van LiDAR-data
+def calculate_weight(particle, lidar_data, binary_map):
+    weight = 0
+    for (distance, angle) in lidar_data:
+        if distance < 10.0:  # Alleen geldige metingen
+            rad = math.radians(angle) + particle.theta
+            end_x = particle.x + distance * math.cos(rad)
+            end_y = particle.y + distance * math.sin(rad)
+            if raytrace((particle.x, particle.y), (end_x, end_y), binary_map):
+                weight += 1  # Positieve bijdrage voor een goede match
 
-    def visualize_localization(self, clusters, output_path="localization_visualization.png"):
-        """Visualize the estimated position on the graph."""
-        if self.graph is None:
-            raise ValueError("Graph has not been built yet.")
-        
-        # Estimate the position
-        x, y = self.get_estimated_position(clusters)
-        
-        # Plot the graph
-        plt.figure(figsize=(10, 10))
-        pos = nx.get_node_attributes(self.graph, 'pos')  # Get node positions
-        nx.draw(self.graph, pos, with_labels=False, node_size=50, node_color='blue', edge_color='gray')
-        
-        # Plot the estimated position
-        plt.scatter([x], [y], color='red', label='Estimated Position', s=100, marker='x')
-        
-        # Add labels and legend
-        plt.xlabel("X Coordinate")
-        plt.ylabel("Y Coordinate")
-        plt.title("Localization Visualization on Graph")
-        plt.legend()
-        plt.grid(False)  # Disable grid for graph-based visualization
+    # Exponentiële schaal voor gewichten
+    weight = max(weight, 0.1)
+    weight = math.exp(weight)
+    print(f"Particle ({particle.x}, {particle.y}) weight: {weight}")
+    return weight
 
-        # Save the visualization
-        plt.savefig(output_path)
-        plt.close()
+# Update partikels op basis van LiDAR-data
+def update_particles(particles, lidar_data, binary_map):
+    for particle in particles:
+        particle.weight = calculate_weight(particle, lidar_data, binary_map)
+
+# Her-sampling van partikels op basis van hun gewichten
+def resample_particles(particles):
+    weights = np.array([p.weight for p in particles], dtype=np.float64)
+    total_weight = np.sum(weights)
+    if total_weight == 0:
+        print("All weights are zero! Assigning equal weights.")
+        weights = np.ones(len(particles))  # Gelijke gewichten toewijzen
+    else:
+        weights /= total_weight  # Normaliseer gewichten
+    print(f"Normalized weights: {weights}")
+    new_particles = random.choices(particles, weights=weights, k=len(particles))
+    return [Particle(p.x, p.y, p.theta) for p in new_particles]
+
+# Initialiseer partikels willekeurig in de map
+def initialize_particles(num_particles, binary_map, initial_position=None):
+    particles = []
+    for _ in range(num_particles):
+        if initial_position:
+            x = random.uniform(initial_position[0] - 1, initial_position[0] + 1)
+            y = random.uniform(initial_position[1] - 1, initial_position[1] + 1)
+        else:
+            x = random.uniform(0, binary_map.shape[1] * SCALE)
+            y = random.uniform(0, binary_map.shape[0] * SCALE)
+        theta = random.uniform(0, 2 * math.pi)
+        particles.append(Particle(x, y, theta))
+    return particles
+
+# Vraag de geschatte wereldcoördinaten op (gemiddelde van partikels)
+def get_estimated_position(particles):
+    x = np.mean([p.x for p in particles])
+    y = np.mean([p.y for p in particles])
+    theta = np.mean([p.theta for p in particles])
+    return x, y, theta
+
+# Sla een afbeelding op van de map met een "X" op de geschatte positie
+def save_map_with_robot_position(map_image, particles, output_filepath):
+    # Maak een kopie van de originele map
+    map_with_robot = cv2.cvtColor(map_image, cv2.COLOR_GRAY2BGR)
+
+    estimated_position = get_estimated_position(particles)
+    # Converteer wereldcoördinaten naar pixelcoördinaten
+    map_x = int(estimated_position[0] / SCALE)
+    map_y = int(estimated_position[1] / SCALE)
+
+    # Zet een rode pixel op de geschatte positie
+    color = (0, 0, 255)  # Rood
+    map_with_robot[map_y, map_x] = color
+
+    # Teken alle partikels in blauw, met intensiteit afhankelijk van het aantal partikels op die locatie
+    particle_density = np.zeros_like(map_image, dtype=np.float32)
+    for particle in particles:
+        px = int(particle.x / SCALE)
+        py = int(particle.y / SCALE)
+        if 0 <= px < particle_density.shape[1] and 0 <= py < particle_density.shape[0]:
+            # Maak een 5x5 vierkant rond de partikelpositie
+            for dx in range(-15, 16):
+                for dy in range(-15, 16):
+                    nx, ny = px + dx, py + dy
+                    if 0 <= nx < particle_density.shape[1] and 0 <= ny < particle_density.shape[0]:
+                        particle_density[ny, nx] += 1
+
+    # Normaliseer de dichtheid en schaal naar 0-255
+    particle_density = (particle_density / np.max(particle_density) * 255).astype(np.uint8)
+    particle_density_colored = cv2.applyColorMap(particle_density, cv2.COLORMAP_JET)
+
+    # Combineer de dichtheid met de originele map
+    map_with_robot = cv2.addWeighted(map_with_robot, 0.7, particle_density_colored, 0.3, 0)
+
+    # Sla de afbeelding op
+    cv2.imwrite(output_filepath, map_with_robot)
+
+def raytrace(start, end, binary_map):
+    """Volg een straal van start naar end en retourneer het eerste obstakel."""
+    x0, y0 = int(start[0] / SCALE), int(start[1] / SCALE)
+    x1, y1 = int(end[0] / SCALE), int(end[1] / SCALE)
+
+    # Bresenham's line algorithm
+    dx = abs(x1 - x0)
+    dy = abs(y1 - y0)
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+    err = dx - dy
+
+    while True:
+        if 0 <= x0 < binary_map.shape[1] and 0 <= y0 < binary_map.shape[0]:
+            if binary_map[y0, x0] == 0:  # Obstakel gevonden
+                if (x0, y0) == (x1, y1):  # Eindpunt bereikt
+                    return True
+                break
+        if x0 == x1 and y0 == y1:
+            break
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            x0 += sx
+        if e2 < dx:
+            err += dx
+            y0 += sy
+
+    return False 
+
+# Interface klasse voor lokalisatie
+class LocalizationInterface:
+    def __init__(self, map_filepath, num_particles=100):
+        self.binary_map, self.map_image = load_map(map_filepath)
+        self.particles = initialize_particles(num_particles, self.binary_map)
+
+    def process_lidar_data(self, lidar_data):
+        update_particles(self.particles, lidar_data, self.binary_map)
+        self.particles = resample_particles(self.particles)
+        estimated_position = get_estimated_position(self.particles)
+        return estimated_position
+
+    def save_visualization(self, output_filepath):
+        """
+        Sla een visualisatie van de map op met de geschatte robotpositie.
+        """
+
+        # Sla de map op met de geschatte positie
+        save_map_with_robot_position(self.map_image, self.particles, output_filepath)
+        print(f"Map met robotpositie opgeslagen als '{output_filepath}'")
