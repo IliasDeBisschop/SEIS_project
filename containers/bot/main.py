@@ -2,28 +2,35 @@ import asyncio
 import websockets
 import json
 import sys
+import requests  # Import requests for HTTP communication
 from localization import GPSLocalization
 
+task = None  
+
+BOT_ID = "bot1"  # Unieke ID van de bot
+SERVER_URL = "http://server:5000"  # URL van de server
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
     # Initialize the GPS localization system
     gps_localization = GPSLocalization("image_low_pixels.png")
 
+    global task  # Zorg ervoor dat de globale task-variabele wordt gebruikt
+
     try:
         while True:
-            translation = [7.5 / 2, 9.0 / 2, 0] 
-            # Receive GPS data from the bot
-            gps_data = await websocket.recv()
-            gps_data = json.loads(gps_data)
-            print(f"Received GPS data: {gps_data}")
+            if task is None:
+                # Vraag een nieuwe taak aan bij de server
+                response = requests.get(f"{SERVER_URL}/bot/{BOT_ID}/get_task")
+                if response.status_code == 200:
+                    task = response.json().get("task")
+                    print(f"Nieuwe taak ontvangen: {task}")
+                else:
+                    print(f"Geen taak beschikbaar: {response.json().get('error')}")
+                    await asyncio.sleep(5)  # Wacht even voordat je opnieuw probeert
+                    continue
                         
             sys.stdout.flush()
-
-            # Visualize localization and save to file
-            localization_output_path = "./output/localization_visualization.png"
-            gps_localization.visualize_localization(gps_data, output_path=localization_output_path)
-            print(f"Localization visualization saved to {localization_output_path}")
 
             # Generate motor commands (placeholder)
             motor_commands = {

@@ -9,6 +9,7 @@ services:
       - "5001:5001"  # Expose port 5000 in the container as 5001 on the host
     volumes:
        - ./bot1_output:/app/output  # Use a named volume for the output folder
+    container_name: bot1
 
   # bot2:
   #   build:
@@ -32,18 +33,19 @@ services:
   #   ports:
   #     - "5003:5000"  # Expose port 5000 in the container as 5003 on the host
 
-  # server:
-  #   build:
-  #     context: ./server
-  #     dockerfile: dockerfile
-  #   stdin_open: true
-  #   tty: true
-  #   ports:
-  #     - "5000:5000"  # Expose port 5000 for the server
-  #   depends_on:
-  #     - bot1
-  #     # - bot2
-  #     # - bot3
+  server:
+    build:
+      context: ./server
+      dockerfile: dockerfile
+    stdin_open: true
+    tty: true
+    ports:
+      - "5000:5000"  # Expose port 5000 for the server
+    depends_on:
+      - bot1
+      # - bot2
+      # - bot3
+    container_name: server
 volumes:
   bot1_output:
     

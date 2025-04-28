@@ -26,6 +26,14 @@ BOT_ENDPOINTS = {
     "bot2": "http://bot2:5000",
     "bot3": "http://bot3:5000",
 }
+def getWorldCoordinates(row, column):
+    """Convert (row, column) to world coordinates."""
+    x,y = (7.5/2)-2.1+0.6*(row%10), -4.2+ (9/2) + 0.6*column
+    if row >= 10:
+        y += 5
+    return (x,y)
+
+
 
 def generate_random_task():
     """Generate a random (row, column) tuple."""
@@ -44,9 +52,6 @@ def generate_tasks_at_interval():
         print (f"Current tasks: {tasks}")
         time.sleep(INTERVAL)  # Wait for the next interval
 
-# Start the task generation in a separate thread
-task_thread = threading.Thread(target=generate_tasks_at_interval, daemon=True)
-task_thread.start()
 
 @app.route("/bot/<bot_id>/get_task", methods=["GET"])
 def get_task(bot_id):
@@ -63,7 +68,9 @@ def get_task(bot_id):
             # Assign the task to the bot
             bot_rows[bot_id] = row
             tasks.remove(task)  # Remove the task from the list
-            return jsonify({"task": {"row": row, "column": column}})
+            x_cord, y_cord = getWorldCoordinates(row, column)
+            print(f"##### Bot {bot_id} assigned to task at row {row}, column {column} (world coordinates: {x_cord}, {y_cord})")
+            return jsonify({"task": {"row": row, "column": column, "x": x_cord, "y": y_cord}})
 
     # If no free rows are available, assign the oldest task regardless of row
     if tasks:
@@ -106,4 +113,7 @@ def control_bot(bot_id):
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
+    # Start the task generation in a separate thread
+    task_thread = threading.Thread(target=generate_tasks_at_interval, daemon=True)
+    task_thread.start()
     app.run(host="0.0.0.0", port=5000)

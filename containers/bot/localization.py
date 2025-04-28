@@ -32,9 +32,7 @@ class GPSLocalization:
         pixel_y = int(gps_y / resolution)
 
         # Draw the robot's position as a red dot
-        print(f"GPS Coordinates: ({gps_x}, {gps_y}) -> Pixel Coordinates: ({pixel_x}, {pixel_y})")
         cv2.circle(map_image, (pixel_x, 1800 - pixel_y), 20, (0, 0, 255), -1)  # Red dot with radius 10 pixels
 
         # Save the visualization
         cv2.imwrite(output_path, map_image)
-        print(f"Localization visualization saved to {output_path}")
