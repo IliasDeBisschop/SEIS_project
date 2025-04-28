@@ -22,27 +22,19 @@ class GPSLocalization:
         if map_image is None:
             raise FileNotFoundError(f"Map image '{self.map_image_path}' not found or cannot be read.")
 
-        # Map dimensions in meters
-        map_width_meters = 16  # Width of the room in meters
-        map_height_meters = 9  # Height of the room in meters
+        resolution = 0.5/100 # 0.5 cm per pixel
+        gps_coordinates = [gps_data["gps"]["x"] + 7.5/2, gps_data["gps"]["y"] + 9/2, gps_data["gps"]["z"]]
 
-        # Get map image dimensions
-        map_height_pixels, map_width_pixels, _ = map_image.shape
 
         # Convert GPS coordinates to pixel coordinates
-        gps_x, gps_y = gps_data["gps"]["x"], gps_data["gps"]["y"]
-        pixel_x = int((gps_x / map_width_meters) * map_width_pixels)
-        pixel_y = int((1 - (gps_y / map_height_meters)) * map_height_pixels)  # Invert Y-axis for image coordinates
+        gps_x, gps_y = gps_coordinates[0], gps_coordinates[1]  # Assuming gps_data is a list of [x, y, z]
+        pixel_x = int(gps_x / resolution)
+        pixel_y = int(gps_y / resolution)
 
         # Draw the robot's position as a red dot
-        cv2.circle(map_image, (pixel_x, pixel_y), 10, (0, 0, 255), -1)  # Red dot with radius 10 pixels
+        print(f"GPS Coordinates: ({gps_x}, {gps_y}) -> Pixel Coordinates: ({pixel_x}, {pixel_y})")
+        cv2.circle(map_image, (pixel_x, 1800 - pixel_y), 20, (0, 0, 255), -1)  # Red dot with radius 10 pixels
 
         # Save the visualization
         cv2.imwrite(output_path, map_image)
         print(f"Localization visualization saved to {output_path}")
-
-        # Optionally display the visualization
-        plt.imshow(cv2.cvtColor(map_image, cv2.COLOR_BGR2RGB))
-        plt.title("Localization Visualization")
-        plt.axis("off")
-        plt.show()

@@ -12,10 +12,12 @@ async def handle_connection(websocket, path):
 
     try:
         while True:
+            translation = [7.5 / 2, 9.0 / 2, 0] 
             # Receive GPS data from the bot
             gps_data = await websocket.recv()
             gps_data = json.loads(gps_data)
             print(f"Received GPS data: {gps_data}")
+                        
             sys.stdout.flush()
 
             # Visualize localization and save to file
