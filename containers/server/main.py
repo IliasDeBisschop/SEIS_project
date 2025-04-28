@@ -16,6 +16,11 @@ bot_rows = {
     "bot2": None,
     "bot3": None,
 }
+bot_hall_cordinates = {
+    "bot1": (0.25, 5.1),
+    "bot2": (0.25, 4.5),
+    "bot3": (0.25, 3.9),
+}
 
 # Global list to store tasks
 tasks = []
@@ -70,7 +75,7 @@ def get_task(bot_id):
             tasks.remove(task)  # Remove the task from the list
             x_cord, y_cord = getWorldCoordinates(row, column)
             print(f"##### Bot {bot_id} assigned to task at row {row}, column {column} (world coordinates: {x_cord}, {y_cord})")
-            return jsonify({"task": {"row": row, "column": column, "x": x_cord, "y": y_cord}})
+            return jsonify({"task": {"x": x_cord, "y": y_cord, "end_x": bot_hall_cordinates[bot_id][0], "end_y": bot_hall_cordinates[bot_id][1]}})
 
     # If no free rows are available, assign the oldest task regardless of row
     if tasks:

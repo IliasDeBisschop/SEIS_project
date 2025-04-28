@@ -7,8 +7,6 @@ from localization import GPSLocalization
 
 task = None  
 
-BOT_ID = "bot1"  # Unieke ID van de bot
-SERVER_URL = "http://server:5000"  # URL van de server
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
@@ -19,23 +17,13 @@ async def handle_connection(websocket, path):
 
     try:
         while True:
-            if task is None:
-                # Vraag een nieuwe taak aan bij de server
-                response = requests.get(f"{SERVER_URL}/bot/{BOT_ID}/get_task")
-                if response.status_code == 200:
-                    task = response.json().get("task")
-                    print(f"Nieuwe taak ontvangen: {task}")
-                else:
-                    print(f"Geen taak beschikbaar: {response.json().get('error')}")
-                    await asyncio.sleep(5)  # Wacht even voordat je opnieuw probeert
-                    continue
                         
             sys.stdout.flush()
 
             # Generate motor commands (placeholder)
             motor_commands = {
                 "left_speed": 1.0,  # Example: Move forward
-                "right_speed": 1.0
+                "right_speed": -1.0
             }
 
             # Send motor commands back to the bot

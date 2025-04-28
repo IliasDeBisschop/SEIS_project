@@ -11,6 +11,9 @@ timestep = int(robot.getBasicTimeStep())
 gps = robot.getDevice("gps")  # GPS sensor
 gps.enable(timestep)
 
+gyro = robot.getDevice("gyro(1)")  # Gyroscope sensor
+gyro.enable(timestep)
+
 left_motor = robot.getDevice("left wheel motor")
 right_motor = robot.getDevice("right wheel motor")
 left_motor.setPosition(float('inf'))
@@ -39,6 +42,9 @@ while True:
             gps_values = gps.getValues()
             gps_data = {"gps": {"x": gps_values[0], "y": gps_values[1], "z": gps_values[2]}}
 
+            gyro_values = gyro.getValues()
+            gyro_data = {"gyro": {"x": gyro_values[0], "y": gyro_values[1], "z": gyro_values[2]}}
+            print(f"Gyro data: {gyro_data}")
             # Send GPS data to the container
             try:
                 # Serialize the GPS data as JSON
