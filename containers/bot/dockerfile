@@ -4,27 +4,27 @@ FROM ros:noetic-ros-base
 # Set environment variables to avoid interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install additional dependencies
-RUN apt-get update && apt-get install -y \
+# Set the working directory
+WORKDIR /app
+
+# Copy only requirements.txt first to leverage Docker caching
+COPY requirements.txt /app/requirements.txt
+
+# Install dependencies in a single RUN command to reduce layers
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     libgl1-mesa-glx \
     libxkbcommon-x11-0 \
     ros-noetic-sensor-msgs \
     ros-noetic-geometry-msgs \
     ros-noetic-tf \
+    && pip3 install --no-cache-dir -r /app/requirements.txt \
     && rm -rf /var/lib/apt/lists/*
-
-# Set the working directory
-WORKDIR /app
-
-# Copy only requirements.txt first
-COPY requirements.txt /app/requirements.txt
-
-# Install Python dependencies
-RUN pip3 install --no-cache-dir -r /app/requirements.txt
 
 # Copy the rest of the application
 COPY . /app/
+
+# Create the output directory
 RUN mkdir -p /app/output
 
 # Source ROS setup script

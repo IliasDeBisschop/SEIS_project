@@ -1,5 +1,4 @@
 from controller import Robot
-import struct
 import websocket
 import time
 import json
@@ -9,8 +8,8 @@ robot = Robot()
 timestep = int(robot.getBasicTimeStep())
 
 # Initialize devices
-lds = robot.getDevice("LDS-01")  # LiDAR sensor
-lds.enable(timestep)
+gps = robot.getDevice("gps")  # GPS sensor
+gps.enable(timestep)
 
 left_motor = robot.getDevice("left wheel motor")
 right_motor = robot.getDevice("right wheel motor")
@@ -18,7 +17,7 @@ left_motor.setPosition(float('inf'))
 right_motor.setPosition(float('inf'))
 
 # WebSocket configuration
-WS_URL = "ws://127.0.0.1:5001"  # WebSocket server address
+WS_URL = "ws://0.0.0.0:5000"  # WebSocket server address
 
 def connect_to_container():
     """Establish a WebSocket connection to the container."""
@@ -36,15 +35,16 @@ while True:
     ws = connect_to_container()
     try:
         while robot.step(timestep) != -1:
-            # Read LiDAR data
-            range_image = [value if value != float('inf') else 10.0 for value in lds.getRangeImage()]
+            # Read GPS data
+            gps_values = gps.getValues()
+            gps_data = {"gps": {"x": gps_values[0], "y": gps_values[1], "z": gps_values[2]}}
 
-            # Send LiDAR data to the container
+            # Send GPS data to the container
             try:
-                # Serialize the LiDAR data as JSON
-                lidar_data = json.dumps({"lidar": range_image})
-                ws.send(lidar_data)
-                print(f"Sent LiDAR data: {range_image}")
+                # Serialize the GPS data as JSON
+                gps_data_json = json.dumps(gps_data)
+                ws.send(gps_data_json)
+                print(f"Sent GPS data: {gps_data}")
             except Exception as e:
                 print(f"Error sending data to container: {e}")
                 break
