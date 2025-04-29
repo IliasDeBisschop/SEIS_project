@@ -30,7 +30,7 @@ class GPSLocalization:
 
         return x, y #this is in 0.5cm from the bottom left      
 
-    def visualize_localization(self, gps_data, output_path="localization_visualization.png"):
+    def visualize_localization(self, gps_data, output_path="output/localization_visualization.png"):
         """
         Visualize the robot's position on the map using GPS data.
 
@@ -46,17 +46,19 @@ class GPSLocalization:
 
         # Calculate pixel coordinates
         pixel_x, pixel_y = self.calculate_coordinates(gps_data)
+        print(f"data: {gps_data}")
+        print(f"pixel_x: {pixel_x}, pixel_y: {pixel_y}")
 
         # Draw the robot's position as a red dot
         cv2.circle(map_image, (pixel_x, 1800 - pixel_y), 20, (0, 0, 255), -1)  # Red dot with radius 10 pixels
 
         # Save the visualization
-        cv2.imwrite(output_path, map_image)
-
+        success = cv2.imwrite(output_path, map_image)
+        if not success:
+            print(f"Failed to save the image to {output_path}")
 
     def angle_calculator(self, gps_data):
         compass_x = gps_data["compass"]["x"]
         compass_y = gps_data["compass"]["y"]
         angle = -math.atan2(compass_y, compass_x) + math.radians(90)
         return math.degrees(angle)
-        

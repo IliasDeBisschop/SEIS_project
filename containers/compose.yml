@@ -46,6 +46,15 @@ services:
       # - bot2
       # - bot3
     container_name: server
+  webapp:
+    image: nginx:latest
+    container_name: webapp
+    ports:
+      - "8080:80"  # Expose port 80 in the container as 8080 on the host
+    volumes:
+      - ./bot1_output:/usr/share/nginx/html/image
+      - ./webapp:/usr/share/nginx/html  # Mount the webapp directory to the nginx html directory
+    depends_on:
+      - server
 volumes:
   bot1_output:
-    
