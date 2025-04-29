@@ -4,6 +4,7 @@ import json
 import sys
 import requests  # Import requests for HTTP communication
 from localization import GPSLocalization
+from routing import BotStateMachine  # Import the Routing class from routing.py
 
 task = None  
 
@@ -12,12 +13,15 @@ async def handle_connection(websocket, path):
     print("Bot connected.")
     # Initialize the GPS localization system
     gps_localization = GPSLocalization("image_low_pixels.png")
+    bot_state_machine = BotStateMachine()  # Initialize the bot state machine
      
 
-    global task  # Zorg ervoor dat de globale task-variabele wordt gebruikt
 
     try:
         while True:
+            # Send a ping to keep the connection alive
+            await websocket.ping()
+
             # Receive data from the bot
             data = await websocket.recv()
             data = json.loads(data)
@@ -31,7 +35,6 @@ async def handle_connection(websocket, path):
             motor_commands = bot_state_machine.handle_event(
                 event="start",  # Example event; replace with actual event logic
                 bot_coordinates=(x, y),
-                task=task,  # Replace with actual task if available
                 angle=angle
             )
 
@@ -40,9 +43,7 @@ async def handle_connection(websocket, path):
                 "left_speed": motor_commands[0],
                 "right_speed": motor_commands[1]
             }
-        
-            # Send motor commands back to the bot
-            await websocket.send(json.dumps(motor_commands))
+            await websocket.send(json.dumps(motor_commands_json))
     except websockets.ConnectionClosed:
         print("Connection to bot lost.")
     except Exception as e:

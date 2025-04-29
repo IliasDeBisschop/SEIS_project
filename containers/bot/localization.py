@@ -28,7 +28,7 @@ class GPSLocalization:
         x = int(gps_x / resolution)
         y = int(gps_y / resolution)
 
-        return x, y #this is in 0.5cm from the bottom left      
+        return x/200, y/200 #this is in 0.5cm from the bottom left      
 
     def visualize_localization(self, gps_data, output_path="localization_visualization.png"):
         """
