@@ -141,8 +141,14 @@ class BotStateMachine:
     def waiting(self):
         return self.wait(self, BotState.WAITING)
 
-    def resolving_conflict(self):
-        pass #eest achteruit rijden wachten tot de andere bot weg is en dan weer vooruit rijden
+    def resolving_conflict(self, bot_cordinates=None, other_bot_cordinates=None):
+        if other_bot_cordinates and abs(bot_cordinates[0] - other_bot_cordinates[0]) <= theshold:
+            print("Conflict detected. Moving backward to resolve conflict.")
+            return (-6.67, -6.67)  # Move backward to avoid collision
+        else:
+            print("Conflict resolved. Moving forward.")
+            self.transition_to(BotState.WAITING)
+            return (6.67, 6.67)  # Move forward after resolving conflict
 
     def wait(self, state, waitTime=2):
         waitingTime = 2  # seconds
