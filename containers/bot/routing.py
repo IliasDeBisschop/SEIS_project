@@ -29,7 +29,7 @@ class BotStateMachine:
         print(f"Transitioning from {self.state.name} to {new_state.name}")
         self.state = new_state
 
-    def handle_event(self, event):
+    def handle_event(self, event,bot_coordinates=None,task=None):
         match (self.state, event):
             case (BotState.WAITING, "start"):
                 self.transition_to(BotState.POSITION_IN_ROW)
@@ -126,6 +126,22 @@ class BotStateMachine:
         else:
             # nog steeds vooruit rijden
             return (6.67, 6.67)
+        
+
+    def rotate(self, desired_Angle,current_angle):
+        if abs(desired_Angle - current_angle) > theshold:
+            # draai naar de gewenste hoek
+            if desired_Angle > current_angle:
+                return (0, 6.67)
+            else:
+                return (0, -6.67)
+            
+        pass
+    
+    def angle_calculator(self, bot_cordinates):
+        bot_cordinates
+
+
 
     def returning_to_station(self, task=None, bot_cordinates=None):
         pass
@@ -174,11 +190,3 @@ class BotStateMachine:
 # Example usage
 if __name__ == "__main__":
     bot = BotStateMachine()
-    bot.handle_event("start")
-    bot.handle_event("reached_row")
-    bot.handle_event("pickup")
-    bot.handle_event("return_to_colom")
-    bot.handle_event("return_to_station")
-    bot.handle_event("wait")
-    bot.handle_event("conflict")
-    bot.handle_event("resolved")

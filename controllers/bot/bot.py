@@ -11,8 +11,9 @@ timestep = int(robot.getBasicTimeStep())
 gps = robot.getDevice("gps")  # GPS sensor
 gps.enable(timestep)
 
-gyro = robot.getDevice("gyro(1)")  # Gyroscope sensor
-gyro.enable(timestep)
+
+compas = robot.getDevice("compass")  # Compass sensor
+compas.enable(timestep)
 
 left_motor = robot.getDevice("left wheel motor")
 right_motor = robot.getDevice("right wheel motor")
@@ -40,17 +41,16 @@ while True:
         while robot.step(timestep) != -1:
             # Read GPS data
             gps_values = gps.getValues()
-            gps_data = {"gps": {"x": gps_values[0], "y": gps_values[1], "z": gps_values[2]}}
-
-            gyro_values = gyro.getValues()
-            gyro_data = {"gyro": {"x": gyro_values[0], "y": gyro_values[1], "z": gyro_values[2]}}
-            print(f"Gyro data: {gyro_data}")
+            compass_values = compas.getValues()
+            data = {
+                "gps": {"x": gps_values[0], "y": gps_values[1], "z": gps_values[2]},
+                "compass": {"x": compass_values[0], "y": compass_values[1], "z": compass_values[2]}
+            }
             # Send GPS data to the container
             try:
                 # Serialize the GPS data as JSON
-                gps_data_json = json.dumps(gps_data)
-                ws.send(gps_data_json)
-                print(f"Sent GPS data: {gps_data}")
+                data_json = json.dumps(data)
+                ws.send(data_json)
             except Exception as e:
                 print(f"Error sending data to container: {e}")
                 break
