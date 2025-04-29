@@ -3,7 +3,7 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/TurtleBot3Burger.proto"
+EXTERNPROTO "../protos/TurtleBot3Burger.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/apartment_structure/protos/Wall.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotis/protos/RobotisLds01.proto"
 
@@ -11,7 +11,7 @@ WorldInfo {
 }
 Viewpoint {
   orientation 0.2510694310743744 -0.17596697134563943 -0.951840199705514 4.318208637326432
-  position 0.7570272637049325 -6.016719343056869 4.3350320534914175
+  position -1.2356205184575706 -0.5270044833055547 1.0236707030409966
 }
 Wall {
   translation -1.8 -4.2 0
@@ -982,13 +982,26 @@ RectangleArena {
   wallHeight 1
 }
 TurtleBot3Burger {
-  translation -3.5 0.6 0
-  rotation 0 0 1 0
+  hidden position_0_0 -101.93387180030443
+  hidden position_0_1 102.78450624669492
+  hidden position_0_2 -382.9529042436703
+  hidden position2_0_2 2.479954683423078
+  hidden position3_0_2 -382.12911965278005
+  hidden linearVelocity_0 0.00352488174090633 0.011817737592167745 -1.328860990054344e-08
+  hidden angularVelocity_0 -1.950971821088072e-07 -7.644938340756096e-07 -0.3716009574284298
+  hidden rotation_9 0 -1 0 2.973702885431047
+  hidden linearVelocity_9 -0.028558872083725227 0.008480568321512711 1.0182542637941348e-08
+  hidden angularVelocity_9 -0.2851584640999158 -0.958498618731315 -0.37251839813018467
+  hidden rotation_10 -0.9422970127335186 2.101164778405287e-06 0.33477804556014734 3.14159065450894
+  hidden linearVelocity_10 0.0284454679217498 -0.0084806768864237 1.5107937794443205e-08
+  hidden angularVelocity_10 0.28515806840454816 0.9584970708411651 -0.372538043016807
+  hidden rotation_11 0.5594366386699471 0.7701816281174093 0.30635095401204127 2.7643648683957376
+  hidden linearVelocity_11 0.008518459737857743 0.02881017406173655 -5.035380404042271e-08
+  hidden angularVelocity_11 -7.202543516285692 2.1296149315771236 8.159968698770967e-13
+  translation -3.4871918625438796 0.5980497984877053 -0.0002476286375740419
+  rotation 0.002356701606002799 0.015620441055903066 0.9998752161038693 -0.2952968667307081
   controller "bot"
   extensionSlot [
-    Gyro {
-      name "gyro(1)"
-    }
     GPS {
     }
     RobotisLds01 {

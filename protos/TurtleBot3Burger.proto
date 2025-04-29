@@ -34,10 +34,6 @@ PROTO TurtleBot3Burger [
     supervisor IS supervisor
     synchronization IS synchronization
     children [
-    
-      GPS {
-        name "gps"
-      }
       Pose {
         translation -0.03 0 0.153
         children IS extensionSlot
@@ -282,11 +278,8 @@ PROTO TurtleBot3Burger [
       Accelerometer {
         translation -0.032 0 0.078
       }
-      Gyro {
-        translation -0.032 0 0.078
-      }
       Compass {
-        translation -0.032 0 0.078
+        translation 0 0 0
       }
     ]
     boundingObject Group {

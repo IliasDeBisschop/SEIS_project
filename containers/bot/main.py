@@ -12,20 +12,35 @@ async def handle_connection(websocket, path):
     print("Bot connected.")
     # Initialize the GPS localization system
     gps_localization = GPSLocalization("image_low_pixels.png")
+     
 
     global task  # Zorg ervoor dat de globale task-variabele wordt gebruikt
 
     try:
         while True:
-                        
-            sys.stdout.flush()
+            # Receive data from the bot
+            data = await websocket.recv()
+            data = json.loads(data)
 
-            # Generate motor commands (placeholder)
-            motor_commands = {
-                "left_speed": 1.0,  # Example: Move forward
-                "right_speed": -1.0
+            # Extract angle and coordinates
+            angle = gps_localization.angle_calculator(data)
+            x, y = gps_localization.calculate_coordinates(data)
+            print(f"Coordinates: ({x}, {y}), Angle: {angle}")
+
+            # Handle the event and get motor commands
+            motor_commands = bot_state_machine.handle_event(
+                event="start",  # Example event; replace with actual event logic
+                bot_coordinates=(x, y),
+                task=task,  # Replace with actual task if available
+                angle=angle
+            )
+
+            # Send motor commands back to the bot
+            motor_commands_json = {
+                "left_speed": motor_commands[0],
+                "right_speed": motor_commands[1]
             }
-
+        
             # Send motor commands back to the bot
             await websocket.send(json.dumps(motor_commands))
     except websockets.ConnectionClosed:
