@@ -29,13 +29,14 @@ async def handle_connection(websocket, path):
             # Extract angle and coordinates
             angle = gps_localization.angle_calculator(data)
             x, y = gps_localization.calculate_coordinates(data)
-            print(f"Coordinates: ({x}, {y}), Angle: {angle}")
+            print(f"Coordinates: ({x}, {y}), Angle: {angle}")  # Log coordinates and angle
 
             # Handle the event and get motor commands
             motor_commands = bot_state_machine.handle_event(
                 event="start",  # Example event; replace with actual event logic
                 bot_coordinates=(x, y),
-                angle=angle
+                angle=angle,
+                lidar_data=data["lidar"]  # Assuming lidar_data is part of the received data
             )
 
             # Send motor commands back to the bot

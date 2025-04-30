@@ -2,18 +2,23 @@ from enum import Enum, auto
 import requests
 import time
 import threading
+from lidar import LidarProcessor
 
 class BotState(Enum):
     GET_TASK = auto()
     POSITION_IN_ROW = auto()
     TURN_VERTICAL = auto()
+    CHECKING_TRAFFIC1 = auto()
     POSITION_IN_COLOM = auto()
     PICKUP_ITEM = auto()
+    RETURN_HALL = auto()
+    CHECKING_TRAFFIC2 = auto()
     RETURNING_TO_COLOM = auto()
     TURN_HORIZONTAL = auto()
     RETURNING_TO_STATION = auto()
     WAITING = auto()
     RESOLVING_CONFLICT = auto()
+    
 
 theshold = 0.005  
 task = None  # Global variable to store the task
@@ -22,6 +27,11 @@ treshold_angle = 0.1  # Angle threshold for turning
 wait_end_time = 0
 max_speed = 6.67  # Maximum speed of the bot in cm/s
 max_turn_speed = 5  # Maximum turning speed in rad/s
+first_lidar_data = None  # Placeholder for the first LiDAR data
+driving_forward = True  # Flag to indicate if the bot is driving forward
+LidarProcessor = LidarProcessor(max_distance=10.0, angle_range=60)  # Initialize the LidarProcessor
+start_top_shelfs = 3.5  # Starting point for top shelves
+start_bottom_shelfs = 5.5  # Starting point for bottom shelves
 
 class BotStateMachine:
     def __init__(self):
@@ -35,7 +45,7 @@ class BotStateMachine:
         print(f"Transitioning from {self.state.name} to {new_state.name}")
         self.state = new_state
 
-    def handle_event(self, event, bot_coordinates=None, angle=None):
+    def handle_event(self, event, bot_coordinates=None, angle=None,lidar_data=None):
         """
         Handle events by calling the appropriate state-specific function based on the current state.
         """
@@ -67,6 +77,10 @@ class BotStateMachine:
             return self.turn_vertical(bot_coordinates=bot_coordinates, angle=angle)
         elif self.state == BotState.TURN_HORIZONTAL:
             return self.turn_horizontal(bot_coordinates=bot_coordinates, angle=angle)
+        elif self.state == BotState.CHECKING_TRAFFIC1:
+            return self.check_for_traffic(lidar_data=lidar_data)
+        elif self.state == BotState.CHECKING_TRAFFIC2:
+            return self.check_for_traffic(lidar_data=lidar_data)
         else:
             print(f"No action defined for state {self.state.name}")
             return (0, 0)  # Default motor speeds (stop)
@@ -130,7 +144,7 @@ class BotStateMachine:
         
         if abs(desired_angle-angle)<=treshold_angle:
             print("Turned to the correct angle.")
-            self.transition_to(BotState.POSITION_IN_COLOM)
+            self.transition_to(BotState.CHECKING_TRAFFIC1)
             return (0, 0)
         elif desired_angle>angle:
             return (-max_turn_speed, max_turn_speed)
@@ -163,7 +177,36 @@ class BotStateMachine:
 
     def pickup_item(self):
         print("Picking up item...")
-        return self.wait(BotState.RETURNING_TO_COLOM)
+        return self.wait(BotState.RETURN_HALL)
+    
+
+    def return_hall(self, bot_coordinates=None):
+        global task
+        if task is None or bot_coordinates is None:
+            print("Error: Task or bot coordinates are None.")
+            return (0, 0)  # Stop the bot if data is missing
+        
+        go_to_y = 0
+        if bot_coordinates[1] >4.5:
+            go_to_y = start_top_shelfs
+        else:
+            go_to_y = start_bottom_shelfs
+
+        if abs(go_to_y - bot_coordinates[1]) <= theshold:
+            print("Reached the correct row.")
+            self.transition_to(BotState.CHECKING_TRAFFIC2)
+            return (0, 0)  # Stop motors
+        elif (go_to_y <  bot_coordinates[1]):
+            print("distance is", (go_to_y-bot_coordinates[1]))
+            if abs(go_to_y-bot_coordinates[1]) > 0.05:
+                return (-max_speed, -max_speed)
+            return (-0.5, -0.5)
+        
+        if abs(go_to_y-bot_coordinates[1]) > 0.05:
+            print("distance is", (go_to_y-bot_coordinates[1]))
+
+            return (max_speed, max_speed)
+        return (0.5, 0.5)
 
     def returning_to_colom(self, bot_coordinates=None):
         global task
@@ -238,6 +281,36 @@ class BotStateMachine:
         print("Pickup timer expired.")
         self.timer_expired = True
 
+
+    def check_for_traffic(self, lidar_data=None):
+        global first_lidar_data
+
+        if lidar_data is None:
+            print("Debug: No LiDAR data provided.")
+            return (0, 0)
+
+        if first_lidar_data is None:
+            print("Debug: Storing initial LiDAR data.")
+            first_lidar_data = lidar_data
+            return (0, 0)
+
+        print("Debug: Checking if object is getting closer.")
+        if LidarProcessor.is_object_getting_closer(first_lidar_data, lidar_data, direction_is_front=driving_forward):
+            print("Debug: Object detected in front, stopping the bot.")
+            first_lidar_data = lidar_data  # Update the first LiDAR data
+            return (0, 0)
+        else:
+            print("Debug: No object detected, continuing.")
+            if self.state == BotState.CHECKING_TRAFFIC1:
+                print("Debug: Transitioning to POSITION_IN_COLOM.")
+                self.transition_to(BotState.POSITION_IN_COLOM)
+                
+            else:
+                print("Debug: Transitioning to RETURNING_TO_COLOM.")
+                self.transition_to(BotState.RETURNING_TO_COLOM)
+            return (0, 0)
+        
+    
 # Example usage
 if __name__ == "__main__":
     bot = BotStateMachine()

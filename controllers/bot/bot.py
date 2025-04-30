@@ -15,6 +15,9 @@ gps.enable(timestep)
 compas = robot.getDevice("compass")  # Compass sensor
 compas.enable(timestep)
 
+lidar = robot.getDevice("LDS-01")  # Lidar sensor
+lidar.enable(timestep)
+
 left_motor = robot.getDevice("left wheel motor")
 right_motor = robot.getDevice("right wheel motor")
 left_motor.setPosition(float('inf'))
@@ -42,9 +45,11 @@ while True:
             # Read GPS data
             gps_values = gps.getValues()
             compass_values = compas.getValues()
+            lidar_values = lidar.getRangeImage()
             data = {
                 "gps": {"x": gps_values[0], "y": gps_values[1], "z": gps_values[2]},
-                "compass": {"x": compass_values[0], "y": compass_values[1], "z": compass_values[2]}
+                "compass": {"x": compass_values[0], "y": compass_values[1], "z": compass_values[2]},
+                "lidar": lidar_values
             }
 
             # Send GPS data to the container
