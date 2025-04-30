@@ -4,9 +4,21 @@ import json
 import sys
 import requests  # Import requests for HTTP communication
 from localization import GPSLocalization
-# from routing import BotStateMachine  
+from routing import BotStateMachine
+from flask import Flask, request, jsonify
+import threading
 
 task = None  
+routing = BotStateMachine()  
+
+app = Flask(__name__)
+
+@app.route("/control", methods=["POST"])
+def control_robot():
+    routing.webAppControl()
+    return jsonify({"message": "Control command received."})
+    
+
 
 
 async def handle_connection(websocket, path):
@@ -54,9 +66,26 @@ async def handle_connection(websocket, path):
         print(f"Error: {e}")
         traceback.print_exc()  # Log the full stack trace
 
+
 # Start the WebSocket server
 start_server = websockets.serve(handle_connection, "0.0.0.0", 5001)
 print("WebSocket server created on ws://0.0.0.0:5001")  # Log WebSocket creation
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+# Run both Flask and WebSocket servers concurrently
+async def run_servers():
+    # Run the WebSocket server
+    await start_server
+    # Keep the event loop running
+    while True:
+        await asyncio.sleep(1)
+
+# Start Flask in a separate thread
+def run_flask():
+    app.run(host="0.0.0.0", port=5002)
+
+# Run Flask in a separate thread and WebSocket in the event loop
+if __name__ == "__main__":
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
+    asyncio.get_event_loop().run_until_complete(run_servers())

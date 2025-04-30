@@ -13,6 +13,7 @@ class BotState(Enum):
     RETURNING_TO_STATION = auto()
     WAITING = auto()
     RESOLVING_CONFLICT = auto()
+    WAITING_FROM_WEBAPP = auto()
 
 theshold = 0.005  
 
@@ -20,6 +21,7 @@ theshold = 0.005
 class BotStateMachine:
     def __init__(self):
         self.state = BotState.GET_TASK
+        self.previous_state = None
         self.pickup_timer = None
         self.timer_expired = False
 
@@ -47,6 +49,8 @@ class BotStateMachine:
                 self.transition_to(BotState.RESOLVING_CONFLICT)
             case (BotState.RESOLVING_CONFLICT, "resolved"):
                 self.transition_to(BotState.WAITING)
+            case (BotState.WAITING_FROM_WEBAPP, "start"):
+                return (0,0)
             case _:
                 print(f"No transition defined for state {self.state.name} with event '{event}'")
 
@@ -186,6 +190,15 @@ class BotStateMachine:
             # Timer is still running
             print("Pickup timer is still running...")
             return (0, 0)  # Stop movement while waiting for the timer
+
+    def webAppControl(self):
+        if self.previous_state is None:
+            self.previous_state = self.state 
+            self.state = BotState.WAITING_FROM_WEBAPP
+        else:
+            self.state = self.previous_state
+            self.previous_state = None
+
 
 # Example usage
 if __name__ == "__main__":

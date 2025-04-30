@@ -7,6 +7,7 @@ services:
     tty: true
     ports:
       - "5001:5001"  # Expose port 5000 in the container as 5001 on the host
+      - "5002:5002"  # Expose port 5002 in the container as 5002 on the host
     volumes:
        - ./bot1_output:/app/output  # Use a named volume for the output folder
     container_name: bot1

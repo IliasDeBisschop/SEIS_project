@@ -8,6 +8,7 @@
 <body>
     <h1>Welkom bij de Web App</h1>
     <h1>Robot Task Tracker</h1>
+    <button onclick="sendCommandToRobot()">robot stopen/starten</button>
     <table>
         <thead>
             <tr>
@@ -92,6 +93,17 @@
     setInterval(reloadImage, 5000);
     fetchBotTasks();
     reloadImage(); 
+    function sendCommandToRobot() {
+        fetch("http://localhost:5002/control", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+        .catch(error => {
+            console.error("Error sending command:", error);
+        });
+    }
 </script>
 <style>
     body {
