@@ -9,13 +9,13 @@ from flask import Flask, request, jsonify
 import threading
 
 task = None  
-routing = BotStateMachine()  
+bot_state_machine = BotStateMachine()  
 
 app = Flask(__name__)
 
 @app.route("/control", methods=["POST"])
 def control_robot():
-    routing.webAppControl()
+    bot_state_machine.webAppControl()
     return jsonify({"message": "Control command received."})
     
 
@@ -25,12 +25,14 @@ async def handle_connection(websocket, path):
     print("Bot connected.")
     # Initialize the GPS localization system
     gps_localization = GPSLocalization("image_low_pixels.png")
-    # bot_state_machine = BotStateMachine()  # Initialize the bot state machine
+     
 
-    global task  # Zorg ervoor dat de globale task-variabele wordt gebruikt
 
     try:
         while True:
+            # Send a ping to keep the connection alive
+            await websocket.ping()
+
             # Receive data from the bot
             data = await websocket.recv()
             data = json.loads(data)
@@ -41,24 +43,18 @@ async def handle_connection(websocket, path):
             print(f"Coordinates: ({x}, {y}), Angle: {angle}")
             gps_localization.visualize_localization(data)  
             # Handle the event and get motor commands
-
-            # motor_commands = bot_state_machine.handle_event(
-            #     event="start",  # Example event; replace with actual event logic
-            #     bot_coordinates=(x, y),
-            #     task=task,  # Replace with actual task if available
-            #     angle=angle
-            # )
-
-            motor_commands = [6.67, 6.67]  
+            motor_commands = bot_state_machine.handle_event(
+                event="start",  # Example event; replace with actual event logic
+                bot_coordinates=(x, y),
+                angle=angle
+            )
 
             # Send motor commands back to the bot
             motor_commands_json = {
                 "left_speed": motor_commands[0],
                 "right_speed": motor_commands[1]
             }
-        
-            # Send motor commands back to the bot
-            await websocket.send(json.dumps(motor_commands))
+            await websocket.send(json.dumps(motor_commands_json))
     except websockets.ConnectionClosed:
         print("Connection to bot lost.")
     except Exception as e:

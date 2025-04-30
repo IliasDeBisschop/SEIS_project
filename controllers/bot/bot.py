@@ -46,11 +46,12 @@ while True:
                 "gps": {"x": gps_values[0], "y": gps_values[1], "z": gps_values[2]},
                 "compass": {"x": compass_values[0], "y": compass_values[1], "z": compass_values[2]}
             }
+
             # Send GPS data to the container
             try:
-                # Serialize the GPS data as JSON
                 data_json = json.dumps(data)
                 ws.send(data_json)
+                time.sleep(0.01)  # Add a small delay (100ms)
             except Exception as e:
                 print(f"Error sending data to container: {e}")
                 break
@@ -62,7 +63,6 @@ while True:
                     print("Connection to container lost.")
                     break
 
-                # Deserialize motor commands
                 motor_commands = json.loads(motor_data)
                 left_speed = motor_commands["left_speed"]
                 right_speed = motor_commands["right_speed"]
