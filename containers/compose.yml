@@ -11,27 +11,29 @@ services:
        - ./bot1_output:/app/output  # Use a named volume for the output folder
     container_name: bot1
 
-  # bot2:
-  #   build:
-  #     context: ./bot
-  #     dockerfile: dockerfile
-  #   volumes:
-  #     - ../controllers:/app/controllers
-  #   stdin_open: true
-  #   tty: true
-  #   ports:
-  #     - "5002:5000"  # Expose port 5000 in the container as 5002 on the host
+  bot2:
+    build:
+      context: ./bot
+      dockerfile: dockerfile
+    stdin_open: true
+    tty: true
+    ports:
+      - "5003:5001"  # Expose port 5000 in the container as 5001 on the host
+    volumes:
+       - ./bot2_output:/app/output  # Use a named volume for the output folder
+    container_name: bot2
 
-  # bot3:
-  #   build:
-  #     context: ./bot
-  #     dockerfile: dockerfile
-  #   volumes:
-  #     - ../controllers:/app/controllers
-  #   stdin_open: true
-  #   tty: true
-  #   ports:
-  #     - "5003:5000"  # Expose port 5000 in the container as 5003 on the host
+  bot3:
+    build:
+      context: ./bot
+      dockerfile: dockerfile
+    stdin_open: true
+    tty: true
+    ports:
+      - "5005:5001"  # Expose port 5000 in the container as 5001 on the host
+    volumes:
+       - ./bot3_output:/app/output  # Use a named volume for the output folder
+    container_name: bot3
 
   server:
     build:

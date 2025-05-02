@@ -57,14 +57,37 @@ def generate_tasks_at_interval():
         print (f"Current tasks: {tasks}")
         time.sleep(INTERVAL)  # Wait for the next interval
 
+# Map container IP addresses to container names
+CONTAINER_IP_MAP = {
+    "172.18.0.2": "bot1",
+    "172.18.0.3": "bot2",
+    "172.18.0.4": "bot3",
+}
 
-@app.route("/bot/<bot_id>/get_task", methods=["GET"])
-def get_task(bot_id):
-    """Assign the oldest task to a bot. Prefer tasks in rows where no other bot is working, but fall back to any task if necessary."""
+@app.route("/bot/get_bot_id", methods=["GET"])
+def get_bot_id():
+    """Retrieve the bot ID based on the requestor's IP address."""
+    client_ip = request.remote_addr
+    bot_id = CONTAINER_IP_MAP.get(client_ip, None)
+
+    if bot_id is None:
+        return jsonify({"error": "Unknown bot"}), 400
+
+    return jsonify({"bot_id": bot_id})
+
+@app.route("/bot/get_task", methods=["GET"])
+def get_task():
+    """Assign the oldest task to a bot based on the requestor's IP address."""
     global tasks, bot_rows
 
-    if bot_id not in BOT_ENDPOINTS:
-        return jsonify({"error": "Invalid bot ID"}), 400
+    # Get the IP address of the requesting container
+    client_ip = request.remote_addr
+    bot_id = CONTAINER_IP_MAP.get(client_ip, None)
+
+    if bot_id is None:
+        return jsonify({"error": "Unknown bot"}), 400
+
+    print(f"Task request from bot: {bot_id} (IP: {client_ip})")
 
     # First, try to find a task in a row where no other bot is working
     for task in tasks:
@@ -94,10 +117,12 @@ def complete_task(bot_id):
     global bot_rows
 
     if bot_id not in BOT_ENDPOINTS:
+        print(f"Invalid bot ID: {bot_id}")
         return jsonify({"error": "Invalid bot ID"}), 400
 
     # Free up the row for the bot
     bot_rows[bot_id] = None
+    print(f"Bot {bot_id} has completed its task.")
     return jsonify({"message": f"Bot {bot_id} has completed its task and is now free."})
 
 @app.route("/")

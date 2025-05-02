@@ -28,10 +28,9 @@ wait_end_time = 0
 max_speed = 6.67  # Maximum speed of the bot in cm/s
 max_turn_speed = 5  # Maximum turning speed in rad/s
 first_lidar_data = None  # Placeholder for the first LiDAR data
-driving_forward = True  # Flag to indicate if the bot is driving forward
 LidarProcessor = LidarProcessor(max_distance=10.0, angle_range=60)  # Initialize the LidarProcessor
-start_top_shelfs = 3.5  # Starting point for top shelves
-start_bottom_shelfs = 5.5  # Starting point for bottom shelves
+start_top_shelfs = 5.5  # Starting point for top shelves
+start_bottom_shelfs = 3.5  # Starting point for bottom shelves
 
 class BotStateMachine:
     def __init__(self):
@@ -78,35 +77,45 @@ class BotStateMachine:
         elif self.state == BotState.TURN_HORIZONTAL:
             return self.turn_horizontal(bot_coordinates=bot_coordinates, angle=angle)
         elif self.state == BotState.CHECKING_TRAFFIC1:
-            return self.check_for_traffic(lidar_data=lidar_data)
+            return self.check_for_traffic(bot_coordinates=bot_coordinates,lidar_data=lidar_data)
         elif self.state == BotState.CHECKING_TRAFFIC2:
-            return self.check_for_traffic(lidar_data=lidar_data)
+            return self.check_for_traffic(bot_coordinates=bot_coordinates,lidar_data=lidar_data)
+        elif self.state == BotState.RETURN_HALL:
+            return self.return_hall(bot_coordinates=bot_coordinates)
         else:
             print(f"No action defined for state {self.state.name}")
             return (0, 0)  # Default motor speeds (stop)
 
     def get_task(self):
         global task
-        BOT_ID = "bot1"  # Unique ID of the bot
         SERVER_URL = "http://server:5000"  # Server URL
 
-        # If there is no task, request a new one from the server
+        # Request a new task from the server
         if task is None:
-            response = requests.get(f"{SERVER_URL}/bot/{BOT_ID}/get_task")
+            response = requests.get(f"{SERVER_URL}/bot/get_task")
             if response.status_code == 200:
                 task = response.json().get("task")
                 print(f"New task assigned: {task}")
                 self.transition_to(BotState.POSITION_IN_ROW)
-                return (max_speed, max_speed)  
+                return (max_speed, max_speed)
             else:
                 print("Failed to get task.")
-                return (0, 0)  
+                return (0, 0)
+
+        # Dynamically retrieve the bot_id from the server
+        response = requests.get(f"{SERVER_URL}/bot/get_bot_id")
+        if response.status_code == 200:
+            bot_id = response.json().get("bot_id")
+            print(f"Retrieved bot_id: {bot_id}")
+        else:
+            print("Failed to retrieve bot_id.")
+            return (0, 0)
 
         # If there is a task, complete it and request a new one
-        response = requests.post(f"{SERVER_URL}/bot/{BOT_ID}/complete_task")
+        response = requests.post(f"{SERVER_URL}/bot/{bot_id}/complete_task")
         if response.status_code == 200:
             print("Task completed successfully.")
-            response = requests.get(f"{SERVER_URL}/bot/{BOT_ID}/get_task")
+            response = requests.get(f"{SERVER_URL}/bot/get_task")
             if response.status_code == 200:
                 task = response.json().get("task")
                 print(f"New task assigned: {task}")
@@ -116,6 +125,8 @@ class BotStateMachine:
                 print("Failed to get new task.")
         else:
             print("Failed to complete task.")
+
+        return (0, 0)  # Stop motors if task retrieval fails
 
     def position_in_row(self, bot_coordinates=None):
         global task
@@ -135,6 +146,8 @@ class BotStateMachine:
         
     def turn_vertical(self, bot_coordinates=None, angle=None):
         global task
+
+
         if task is None or bot_coordinates is None:
             print("Error: Task or bot coordinates are None.")
             return (0, 0)
@@ -282,7 +295,7 @@ class BotStateMachine:
         self.timer_expired = True
 
 
-    def check_for_traffic(self, lidar_data=None):
+    def check_for_traffic(self,bot_coordinates, lidar_data=None):
         global first_lidar_data
 
         if lidar_data is None:
@@ -292,19 +305,31 @@ class BotStateMachine:
         if first_lidar_data is None:
             print("Debug: Storing initial LiDAR data.")
             first_lidar_data = lidar_data
-            return (0, 0)
+            return self.wait(self.state, waitTime=0.5)  # Wait for 0.5 seconds before the next scan 
+
+
+        if self.state == BotState.CHECKING_TRAFFIC1:
+            if bot_coordinates[1] > task["y"]:
+                driving_forward = False
+            else:
+                driving_forward = True
+        else:
+            if bot_coordinates[1] > task["end_y"]:
+                driving_forward = False
+            else:
+                driving_forward = True
+
 
         print("Debug: Checking if object is getting closer.")
         if LidarProcessor.is_object_getting_closer(first_lidar_data, lidar_data, direction_is_front=driving_forward):
             print("Debug: Object detected in front, stopping the bot.")
             first_lidar_data = lidar_data  # Update the first LiDAR data
-            return (0, 0)
+            return self.wait(self.state, waitTime=0.5)
         else:
             print("Debug: No object detected, continuing.")
             if self.state == BotState.CHECKING_TRAFFIC1:
                 print("Debug: Transitioning to POSITION_IN_COLOM.")
                 self.transition_to(BotState.POSITION_IN_COLOM)
-                
             else:
                 print("Debug: Transitioning to RETURNING_TO_COLOM.")
                 self.transition_to(BotState.RETURNING_TO_COLOM)
