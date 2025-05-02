@@ -262,7 +262,6 @@ def vizualize_bots():
     map_image = cv2.imread(map_image_path, cv2.IMREAD_COLOR)
     if map_image is None:
         raise FileNotFoundError(f"Map image '{map_image_path}' not found or cannot be read.")
-
     # Define colors for the bots
     colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0)]  # Red, Green, Blue
 
@@ -275,11 +274,30 @@ def vizualize_bots():
             # Draw the robot's position as a dot with a unique color
             color = colors[index % len(colors)]  # Cycle through the colors
             cv2.circle(map_image, (int(pixel_x * 200), int(1800 - pixel_y * 200)), 20, color, -1)  # Dot with radius 10 pixels
+            bot["color"] = color  # Add the color to the bot's data
+
+    # Add a legend to the map
+    legend_start_x = 50
+    legend_start_y = 50
+    legend_spacing = 30
+    for index, bot in enumerate(bot_coordinates):
+        color = colors[index % len(colors)]
+        bot_id = bot["bot_id"]
+        # Vergroot de rechthoek en tekstgrootte voor de legende
+        cv2.rectangle(map_image, 
+                      (legend_start_x, legend_start_y + index * legend_spacing * 2),  # Y-positie verdubbeld
+                      (legend_start_x + 40, legend_start_y + 40 + index * legend_spacing * 2),  # Breedte en hoogte verdubbeld
+                      color, -1)
+        # Vergroot de tekstgrootte
+        cv2.putText(map_image, bot_id, 
+                    (legend_start_x + 50, legend_start_y + 30 + index * legend_spacing * 2),  # Tekstpositie aangepast
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2)  # Tekstgrootte en dikte verdubbeld
 
     # Save the visualization
     success = cv2.imwrite(output_path, map_image)
     if not success:
         print(f"Failed to save the image to {output_path}")
+        return jsonify({"error": "Failed to save the visualization"}), 500
 
     return jsonify(bot_coordinates)
 
