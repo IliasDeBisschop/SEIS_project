@@ -50,6 +50,9 @@
                     task = "No task assigned";
                     status = "Waiting";
                 } else {
+                    if (data.bot_status) {
+                        row.style.backgroundColor = "red";
+                    }
                     // Format task as a tuple (row, column)
                     task = `(${data.task.row}, ${data.task.column})`;
                     status = "Active";

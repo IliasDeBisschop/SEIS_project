@@ -92,7 +92,7 @@ def get_bot_task(bot_id):
     # Check if the bot has a task assigned
     task = bot_tasks.get(bot_id)
     if task is not None:
-        return jsonify({"task": {"row": task[0], "column": task[1]}})
+        return jsonify({"task": {"row": task[0], "column": task[1]}, "bot_status": bot_stuck_status[bot_id]})
     return jsonify({"error": "No task assigned to this bot"}), 404
 
 @app.route("/bot/register", methods=["POST"])
@@ -269,7 +269,6 @@ def vizualize_bots():
                     "x": data.get("x"),
                     "y": data.get("y")
                 })
-                print(f"Bot {bot_id} coordinates: {data.get('x')}, {data.get('y')}")
             else:
                 print(f"Failed to retrieve coordinates for {bot_id}: {response.status_code}")
                 bot_coordinates.append({
