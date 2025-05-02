@@ -11,6 +11,8 @@ COLUMNS = 6  # Example: Total number of columns
 INTERVAL = 10  # Example: Frequency of task generation in seconds
 MAX_TASKS = 3  # Maximum number of tasks to generate per interval
 max_tasks = 20  # Maximum number of tasks in que
+bot_counter = 0
+
 
 bot_rows = {
     "bot1": None,
@@ -63,37 +65,40 @@ def generate_tasks_at_interval():
             print(f"Current tasks: {tasks}")
         time.sleep(INTERVAL)  # Wait for the next interval
 
-# Map container IP addresses to container names
-CONTAINER_IP_MAP = {
-    "172.18.0.2": "bot1",
-    "172.18.0.3": "bot2",
-    "172.18.0.4": "bot3",
+# Map container ports to bot names
+CONTAINER_PORT_MAP = {
+    "5001": "bot1",
+    "5002": "bot2",
+    "5003": "bot3",
 }
 
-@app.route("/bot/get_bot_id", methods=["GET"])
-def get_bot_id():
-    """Retrieve the bot ID based on the requestor's IP address."""
-    client_ip = request.remote_addr
-    bot_id = CONTAINER_IP_MAP.get(client_ip, None)
+@app.route("/bot/register", methods=["POST"])
+def register_bot():
+    """Register a new bot and assign a unique ID."""
+    global bot_rows, bot_counter
 
-    if bot_id is None:
-        return jsonify({"error": "Unknown bot"}), 400
+    # Increment the bot counter to generate a new bot ID
+    bot_counter += 1
+    bot_id = f"bot{bot_counter}"
 
+    # Register the new bot
+    bot_rows[bot_id] = None  # Initialize the bot's row as None
+
+    print(f"Registered new bot: {bot_id}")
     return jsonify({"bot_id": bot_id})
 
 @app.route("/bot/get_task", methods=["GET"])
 def get_task():
-    """Assign the oldest task to a bot based on the requestor's IP address."""
+    """Assign the oldest task to a bot based on its bot_id."""
     global tasks, bot_rows
 
-    # Get the IP address of the requesting container
-    client_ip = request.remote_addr
-    bot_id = CONTAINER_IP_MAP.get(client_ip, None)
+    # Extract the bot_id from the query parameters
+    bot_id = request.args.get("bot_id")
+    if not bot_id or bot_id not in bot_rows:
+        print(f"Error: Unknown bot ID: {bot_id}")
+        return jsonify({"error": f"Unknown bot ID: {bot_id}"}), 400
 
-    if bot_id is None:
-        return jsonify({"error": "Unknown bot"}), 400
-
-    print(f"Task request from bot: {bot_id} (IP: {client_ip})")
+    print(f"Task request from bot: {bot_id}")
 
     # First, try to find a task in a row where no other bot is working
     for task in tasks:

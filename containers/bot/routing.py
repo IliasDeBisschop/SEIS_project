@@ -31,12 +31,24 @@ first_lidar_data = None  # Placeholder for the first LiDAR data
 LidarProcessor = LidarProcessor(max_distance=10.0, angle_range=60)  # Initialize the LidarProcessor
 start_top_shelfs = 5.5  # Starting point for top shelves
 start_bottom_shelfs = 3.5  # Starting point for bottom shelves
+bot_id = None  # Placeholder for bot ID
 
 class BotStateMachine:
     def __init__(self):
         self.state = BotState.GET_TASK
-        self.pickup_timer = None
-        self.timer_expired = False
+        self.bot_id = None  # Initialize bot_id
+        self.register_bot()  # Register the bot with the server
+
+    def register_bot(self):
+        """Register the bot with the server and get a unique ID."""
+        SERVER_URL = "http://server:5000"  # Server URL
+        response = requests.post(f"{SERVER_URL}/bot/register")
+        if response.status_code == 200:
+            self.bot_id = response.json().get("bot_id")
+            print(f"Bot registered with ID: {self.bot_id}")
+        else:
+            print("Failed to register bot.")
+            raise Exception("Bot registration failed.")
 
     def transition_to(self, new_state):
         if not isinstance(new_state, BotState):
@@ -89,7 +101,8 @@ class BotStateMachine:
 
         # Request a new task from the server
         if task is None:
-            response = requests.get(f"{SERVER_URL}/bot/get_task")
+            response = requests.get(f"{SERVER_URL}/bot/get_task", params={"bot_id": self.bot_id})
+            print(f"Debug: Server response: {response.status_code}, {response.text}")
             if response.status_code == 200:
                 task = response.json().get("task")
                 print(f"New task assigned: {task}")
@@ -99,20 +112,11 @@ class BotStateMachine:
                 print("Failed to get task.")
                 return (0, 0)
 
-        # Dynamically retrieve the bot_id from the server
-        response = requests.get(f"{SERVER_URL}/bot/get_bot_id")
-        if response.status_code == 200:
-            bot_id = response.json().get("bot_id")
-            print(f"Retrieved bot_id: {bot_id}")
-        else:
-            print("Failed to retrieve bot_id.")
-            return (0, 0)
-
         # If there is a task, complete it and request a new one
-        response = requests.post(f"{SERVER_URL}/bot/{bot_id}/complete_task")
+        response = requests.post(f"{SERVER_URL}/bot/{self.bot_id}/complete_task")
         if response.status_code == 200:
             print("Task completed successfully.")
-            response = requests.get(f"{SERVER_URL}/bot/get_task")
+            response = requests.get(f"{SERVER_URL}/bot/get_task", params={"bot_id": self.bot_id})
             if response.status_code == 200:
                 task = response.json().get("task")
                 print(f"New task assigned: {task}")
