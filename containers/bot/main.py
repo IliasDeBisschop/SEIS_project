@@ -57,9 +57,20 @@ async def handle_connection(websocket, path):
                 angle=angle,
                 lidar_data=data["lidar"]  # Assuming lidar_data is part of the received data
             )
-
+            # Check motor speeds and lidar data
+            if motor_commands[0] < 0 and motor_commands[1] < 0:
+                print(data["lidar"][0])
+                if data["lidar"][0] < 0.2:
+                    motor_commands = [0,0]
+ 
+            elif motor_commands[0] > 0 and motor_commands[1] > 0:
+                middle_index = len(data["lidar"]) // 2
+                print(data["lidar"][middle_index])
+                if data["lidar"][middle_index] < 0.2:
+                    motor_commands = [0,0]
             # Send motor commands back to the bot
             motor_commands_json = {
+
                 "left_speed": motor_commands[0],
                 "right_speed": motor_commands[1]
             }
