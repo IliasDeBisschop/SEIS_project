@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task List</title>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+    <h1>Task List</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Task ID</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Actions</th> <!-- Nieuwe kolom voor acties -->
+            </tr>
+        </thead>
+        <tbody id="taskList">
+            <!-- Dynamisch gegenereerde rijen -->
+        </tbody>
+    </table>
+    <button onclick="createTask()">Create New Task</button> <!-- Nieuwe knop -->
+    <button onclick="goBack()">Back to Robot Task Tracker</button>
+
+    <script>
+        const apiBaseUrl = "http://localhost:5000";
+
+        async function fetchTasks() {
+            const taskListBody = document.getElementById("taskList");
+            taskListBody.innerHTML = ""; // Clear existing rows
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/tasks`); // Endpoint to fetch tasks
+                if (!response.ok) {
+                    throw new Error("Unable to fetch tasks");
+                }
+                const tasks = await response.json();
+
+                tasks.forEach(task => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${task.id}</td>
+                        <td>Row: ${task.row}, Column: ${task.column}</td>
+                        <td>${task.status}</td>
+                        <td>
+                            <button  class="delete-button" onclick="deleteTask(${task.id})">Delete</button>
+                            <button onclick="updateTask(${task.id}, ${task.row}, ${task.column})">Update</button>
+                        </td>
+                    `;
+                    taskListBody.appendChild(row);
+                });
+            } catch (error) {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td colspan="3">Error fetching tasks: ${error.message}</td>
+                `;
+                taskListBody.appendChild(row);
+            }
+        }
+
+        async function deleteTask(taskId) {
+            if (!confirm("Are you sure you want to delete this task?")) {
+                return; // Annuleer als de gebruiker niet bevestigt
+            }
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/tasks/${taskId}`, {
+                    method: "DELETE",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to delete task");
+                }
+
+                alert("Task deleted successfully");
+                fetchTasks(); // Vernieuw de lijst na het verwijderen
+            } catch (error) {
+                alert(`Error deleting task: ${error.message}`);
+            }
+        }
+
+        async function updateTask(taskId, currentRow, currentColumn) {
+            const newRow = prompt("Enter new row:", currentRow);
+            if (newRow === null) return; // Annuleer als de gebruiker niets invoert
+
+            const newColumn = prompt("Enter new column:", currentColumn);
+            if (newColumn === null) return; // Annuleer als de gebruiker niets invoert
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/tasks/${taskId}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        row: newRow,
+                        column: newColumn,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to update task");
+                }
+
+                alert("Task updated successfully");
+                fetchTasks(); // Vernieuw de lijst na het bijwerken
+            } catch (error) {
+                alert(`Error updating task: ${error.message}`);
+            }
+        }
+
+        async function createTask() {
+            const row = prompt("Enter row for the new task:");
+            if (row === null) return; // Annuleer als de gebruiker niets invoert
+
+            const column = prompt("Enter column for the new task:");
+            if (column === null) return; // Annuleer als de gebruiker niets invoert
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/tasks`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        row: row,
+                        column: column,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to create task");
+                }
+
+                alert("Task created successfully");
+                fetchTasks(); // Vernieuw de lijst na het aanmaken
+            } catch (error) {
+                alert(`Error creating task: ${error.message}`);
+            }
+        }
+
+        function goBack() {
+            window.location.href = "index.html"; // Navigate back to the main page
+        }
+
+        // Fetch tasks on page load
+        fetchTasks();
+    </script>
+</body>
+</html>

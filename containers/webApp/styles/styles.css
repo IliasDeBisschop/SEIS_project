@@ -1,0 +1,60 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    color: #333;
+}
+
+button {
+    background-color: #4CAF50; /* Green */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+button:hover {
+    background-color: #45a049; /* Darker green */
+}
+
+.delete-button {
+    background-color: #f44336; /* Red */
+}
+
+.delete-button:hover {
+    background-color: #d32f2f; /* Darker red */
+}
+
+/* Standaard stijl voor tabelrijen */
+#taskList tr:nth-child(even) {
+    background-color: #f2f2f2; /* Lichtgrijze achtergrondkleur */
+}
+
+#taskList tr:nth-child(odd) {
+    background-color: #ffffff; /* Witte achtergrondkleur */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+th {
+    background-color: #f4f4f4;
+}
+
+img {
+    border: 2px solid #000; /* Black border of 2px */
+    border-radius: 5px; /* Optional: rounded corners */
+}

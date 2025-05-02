@@ -6,7 +6,7 @@ import threading
 import time
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all origins
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])  # Enable CORS for all origins
 
 ROWS = 20  # Example: Total number of rows
 COLUMNS = 6  # Example: Total number of columns
@@ -82,7 +82,7 @@ def get_task(bot_id):
     # First, try to find a task in a row where no other bot is working
     for task in tasks:
         row, column = task
-        if all(assigned_task is None or assigned_task[0] != row for assigned_task in bot_tasks.values()):  # Check if the row is free
+        if all(assigned_task is None or assigned_task[0]%10 != row%10 for assigned_task in bot_tasks.values()):  # Check if the row is free
             # Assign the task to the bot
             bot_tasks[bot_id] = task
             tasks.remove(task)  # Remove the task from the list
@@ -112,6 +112,90 @@ def complete_task(bot_id):
     # Free up the task for the bot
     bot_tasks[bot_id] = None
     return jsonify({"message": f"Bot {bot_id} has completed its task and is now free."})
+
+@app.route("/tasks", methods=["GET"])
+def get_all_tasks():
+    """Return a list of all tasks."""
+    global tasks
+    formatted_tasks = []
+    # Include tasks currently assigned to bots
+    for bot_id, task in bot_tasks.items():
+        if task is not None:
+            formatted_tasks.append({
+                "id": f"{bot_id}_task",
+                "row": task[0],
+                "column": task[1],
+                "status": "In Progress"
+            })
+    # Format tasks as a list of dictionaries with IDs, rows, columns, and statuses
+    formatted_tasks.extend([
+        {"id": index + 1, "row": task[0], "column": task[1], "status": "Pending"}
+        for index, task in enumerate(tasks)
+    ])
+    return jsonify(formatted_tasks)
+
+@app.route("/tasks/<task_id>", methods=["DELETE"])
+def delete_task(task_id):
+    """Delete a task by its ID."""
+    global tasks, bot_tasks
+
+    # Controleer of de taak-ID verwijst naar een taak die aan een bot is toegewezen
+    for bot_id, task in bot_tasks.items():
+        if task is not None and f"{bot_id}_task" == task_id:
+            bot_tasks[bot_id] = None  # Maak de taak vrij
+            return jsonify({"message": f"Task {task_id} assigned to {bot_id} has been deleted."}), 200
+
+    # Controleer of de taak-ID verwijst naar een taak in de wachtrij
+    try:
+        task_index = int(task_id) - 1  # Converteer taak-ID naar index
+        if 0 <= task_index < len(tasks):
+            deleted_task = tasks.pop(task_index)
+            return jsonify({"message": f"Task {task_id} at row {deleted_task[0]}, column {deleted_task[1]} has been deleted."}), 200
+    except ValueError:
+        pass  # Ongeldige taak-ID
+
+    return jsonify({"error": "Task not found"}), 404
+
+@app.route("/tasks/<int:task_id>", methods=["PUT"])
+def update_task(task_id):
+    """Update a task's row and column."""
+    global tasks
+
+    if 0 <= task_id - 1 < len(tasks):
+        task = tasks[task_id - 1]
+        data = request.json
+        row = data.get("row")
+        column = data.get("column")
+
+        # Controleer of row en column geldig zijn
+        if row is not None and column is not None:
+            row = int(row)
+            column = int(column)
+            if 0 <= row < ROWS and 0 <= column < COLUMNS:
+                tasks[task_id - 1] = (row, column)  # Update row en column
+                return jsonify({"message": f"Task {task_id} has been updated."}), 200
+            return jsonify({"error": "Row or column out of bounds"}), 400
+        return jsonify({"error": "Invalid data"}), 400
+    return jsonify({"error": "Task not found"}), 404
+
+@app.route("/tasks", methods=["POST"])
+def create_task():
+    """Create a new task with specified row and column."""
+    global tasks
+
+    data = request.json
+    row = data.get("row")
+    column = data.get("column")
+
+    # Controleer of row en column geldig zijn
+    if row is not None and column is not None:
+        row = int(row)
+        column = int(column)
+        if 0 <= row < ROWS and 0 <= column < COLUMNS:
+            tasks.append((row, column))  # Voeg de nieuwe taak toe
+            return jsonify({"message": f"Task at row {row}, column {column} has been created."}), 201
+        return jsonify({"error": "Row or column out of bounds"}), 400
+    return jsonify({"error": "Invalid data"}), 400
 
 @app.route("/")
 def home():
