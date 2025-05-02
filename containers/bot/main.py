@@ -28,8 +28,9 @@ def control_robot():
 def get_coordinates():
     """Return the current coordinates of the robot."""
     # Hier kun je de logica toevoegen om de huidige coördinaten van de robot te berekenen
+    bot_id = bot_state_machine.getBot_id()
     x, y = gps_localization.getCoordinates()
-    return jsonify({"x": x, "y": y})
+    return jsonify({"x": x, "y": y, "bot_id": bot_id})
 
 async def handle_connection(websocket, path):
     print("Bot connected.")

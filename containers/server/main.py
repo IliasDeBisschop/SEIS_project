@@ -265,20 +265,20 @@ def vizualize_bots():
             if response.status_code == 200:
                 data = response.json()
                 bot_coordinates.append({
-                    "bot_id": bot_id,
+                    "bot_id": data.get("bot_id"),
                     "x": data.get("x"),
                     "y": data.get("y")
                 })
             else:
-                print(f"Failed to retrieve coordinates for {bot_id}: {response.status_code}")
+                print(f"Failed to retrieve coordinates for {endpoint}: {response.status_code}")
                 bot_coordinates.append({
-                    "bot_id": bot_id,
+                    "bot_endpoint": endpoint,
                     "error": f"Failed to retrieve coordinates (status code: {response.status_code})"
                 })
         except requests.exceptions.RequestException as e:
-            print(f"Error connecting to {bot_id}: {str(e)}")
+            print(f"Error connecting to {endpoint}: {str(e)}")
             bot_coordinates.append({
-                "bot_id": bot_id,
+                "bot_endpoint": endpoint,
                 "error": f"Failed to connect to bot endpoint: {str(e)}"
             })
 
@@ -289,9 +289,12 @@ def vizualize_bots():
     # Define colors for the bots
     colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0)]  # Red, Green, Blue
 
+    # Sort the bot coordinates by bot_id
+    bot_coordinates.sort(key=lambda bot: bot.get("bot_id", ""))
+
     # Draw the bots on the map
     for index, bot in enumerate(bot_coordinates):
-        if "x" in bot and "y" in bot:
+        if "x" in bot and "y" in bot and "bot_id" in bot:  # Ensure required keys exist
             # Calculate pixel coordinates
             pixel_x = bot["x"]
             pixel_y = bot["y"]
@@ -305,17 +308,18 @@ def vizualize_bots():
     legend_start_y = 50
     legend_spacing = 30
     for index, bot in enumerate(bot_coordinates):
-        color = colors[index % len(colors)]
-        bot_id = bot["bot_id"]
-        # Vergroot de rechthoek en tekstgrootte voor de legende
-        cv2.rectangle(map_image, 
-                      (legend_start_x, legend_start_y + index * legend_spacing * 2),  # Y-positie verdubbeld
-                      (legend_start_x + 40, legend_start_y + 40 + index * legend_spacing * 2),  # Breedte en hoogte verdubbeld
-                      color, -1)
-        # Vergroot de tekstgrootte
-        cv2.putText(map_image, bot_id, 
-                    (legend_start_x + 50, legend_start_y + 30 + index * legend_spacing * 2),  # Tekstpositie aangepast
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2)  # Tekstgrootte en dikte verdubbeld
+        if "bot_id" in bot:  # Ensure bot_id exists before adding to legend
+            color = colors[index % len(colors)]
+            bot_id = bot["bot_id"]
+            # Enlarge the rectangle and text size for the legend
+            cv2.rectangle(map_image, 
+                          (legend_start_x, legend_start_y + index * legend_spacing * 2),  # Y-position doubled
+                          (legend_start_x + 40, legend_start_y + 40 + index * legend_spacing * 2),  # Width and height doubled
+                          color, -1)
+            # Enlarge the text size
+            cv2.putText(map_image, bot_id, 
+                        (legend_start_x + 50, legend_start_y + 30 + index * legend_spacing * 2),  # Adjusted text position
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2)  # Text size and thickness doubled
 
     # Save the visualization
     success = cv2.imwrite(output_path, map_image)

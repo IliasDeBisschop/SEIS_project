@@ -2,6 +2,7 @@ from enum import Enum, auto
 import requests
 import time
 import threading
+from requests.exceptions import ConnectionError
 from lidar import LidarProcessor
 
 class BotState(Enum):
@@ -32,6 +33,7 @@ LidarProcessor = LidarProcessor(max_distance=10.0)  # Initialize the LidarProces
 start_top_shelfs = 5.35  # Starting point for top shelves
 start_bottom_shelfs = 3.65  # Starting point for bottom shelves
 bot_id = None  # Placeholder for bot ID
+SERVER_URL = "http://server:5000"  # Server URL
 
 class BotStateMachine:
     def __init__(self):
@@ -40,20 +42,27 @@ class BotStateMachine:
         self.bot_id = None  # Initialize bot_id
         self.register_bot()  # Register the bot with the server
 
+    def getBot_id(self):
+        return self.bot_id
+
     def register_bot(self):
-        """Register the bot with the server and get a unique ID."""
-        SERVER_URL = "http://server:5000"  # Server URL
-        response = requests.post(f"{SERVER_URL}/bot/register")
-        if response.status_code == 200:
-            self.bot_id = response.json().get("bot_id")
-            print(f"Bot registered with ID: {self.bot_id}")
-        else:
-            print("Failed to register bot.")
-            raise Exception("Bot registration failed.")
-        
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(f"{SERVER_URL}/bot/register")
+                response.raise_for_status()
+                self.bot_id = response.json().get("bot_id")
+                print(f"Bot registered with ID: {self.bot_id}")
+                return True
+            except ConnectionError as e:
+                print(f"Connection failed (attempt {attempt + 1}/{max_retries}): {e}")
+            except Exception as e:
+                print(f"An error occurred (attempt {attempt + 1}/{max_retries}): {e}")
+            time.sleep(1)  # Wait 1 second before retrying
+        print("Failed to register bot after 5 attempts.")
+        return False
 
     def bot_stuck(self):
-        SERVER_URL = "http://server:5000"  # Server URL
         response = requests.post(f"{SERVER_URL}/bot/stuck", json={"bot_id": self.bot_id})
         if response.status_code == 200:
             print(f"confirmed stuck")
@@ -62,7 +71,6 @@ class BotStateMachine:
             print("Failed to stuck")
             return 0
 
-        
     def transition_to(self, new_state):
         if not isinstance(new_state, BotState):
             raise ValueError("Invalid state")
@@ -110,7 +118,6 @@ class BotStateMachine:
 
     def get_task(self):
         global task
-        SERVER_URL = "http://server:5000"  # Server URL
 
         # Request a new task from the server
         if task is None:
