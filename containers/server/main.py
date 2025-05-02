@@ -28,7 +28,7 @@ bot_hall_cordinates = {
 }
 
 # Global list to store tasks
-tasks = []
+tasks = [generate_random_task() for _ in range(3)]
 
 # Define the bot endpoints
 BOT_ENDPOINTS = {
