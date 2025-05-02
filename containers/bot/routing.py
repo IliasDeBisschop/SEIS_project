@@ -65,7 +65,6 @@ class BotStateMachine:
     
         # Check if the bot is still waiting
         if time.time() < wait_end_time:
-            print("Still waiting...")
             return (0, 0)  # Stop movement while waiting
     
         # Define a dictionary mapping states to their corresponding methods
@@ -104,7 +103,6 @@ class BotStateMachine:
         # Request a new task from the server
         if task is None:
             response = requests.get(f"{SERVER_URL}/bot/get_task", params={"bot_id": self.bot_id})
-            print(f"Debug: Server response: {response.status_code}, {response.text}")
             if response.status_code == 200:
                 task = response.json().get("task")
                 print(f"New task assigned: {task}")
@@ -139,7 +137,6 @@ class BotStateMachine:
 
         # Check if the bot has reached the correct row
         if abs(task["x"] - bot_coordinates[0]) <= theshold:
-            print("Reached the correct row.")
             self.transition_to(BotState.TURN_VERTICAL)
             return (0, 0)  # Stop motors
         elif task["x"] > bot_coordinates[0]:
@@ -158,7 +155,6 @@ class BotStateMachine:
 
         
         if abs(desired_angle-angle)<=treshold_angle:
-            print("Turned to the correct angle.")
             self.transition_to(BotState.CHECKING_TRAFFIC1)
             return (0, 0)
         elif desired_angle>angle:
@@ -174,7 +170,6 @@ class BotStateMachine:
 
         # Check if the bot has reached the correct row
         if abs(task["y"] - bot_coordinates[1]) <= theshold:
-            print("Reached the correct row.")
             self.transition_to(BotState.PICKUP_ITEM)
             return (0, 0)  # Stop motors
         elif (task["y"] <  bot_coordinates[1]):
@@ -206,17 +201,14 @@ class BotStateMachine:
             go_to_y = start_bottom_shelfs
 
         if abs(go_to_y - bot_coordinates[1]) <= theshold:
-            print("Reached the correct row.")
             self.transition_to(BotState.CHECKING_TRAFFIC2)
             return (0, 0)  # Stop motors
         elif (go_to_y <  bot_coordinates[1]):
-            print("distance is", (go_to_y-bot_coordinates[1]))
             if abs(go_to_y-bot_coordinates[1]) > 0.05:
                 return (-max_speed, -max_speed)
             return (-0.5, -0.5)
         
         if abs(go_to_y-bot_coordinates[1]) > 0.05:
-            print("distance is", (go_to_y-bot_coordinates[1]))
 
             return (max_speed, max_speed)
         return (0.5, 0.5)
@@ -245,8 +237,6 @@ class BotStateMachine:
     def turn_horizontal(self, bot_coordinates=None, angle=None):
         desired_angle = 0
 
-        print(f"Desired angle: {desired_angle}, Current angle: {angle}")
-        
         if abs(desired_angle-angle)<=treshold_angle:
             print("Turned to the correct angle.")
             self.transition_to(BotState.RETURNING_TO_STATION)
@@ -264,10 +254,8 @@ class BotStateMachine:
             return (0, 0)  # Stop the bot if data is missing
 
         if abs(task["end_x"] - bot_coordinates[0]) <= theshold:
-            print("Returned to the station.")
             return self.wait(BotState.GET_TASK)
         elif bot_coordinates[0] > task["end_x"]:
-            print("Returning to the station...")
             return (-max_speed, -max_speed)
         else:
             return (1, 1)  # Backward motor speeds
@@ -284,7 +272,6 @@ class BotStateMachine:
 
         # Set the end time for waiting
         wait_end_time = time.time() + waitTime
-        print(f"Waiting for {waitTime} seconds...")
         self.transition_to(state)
         return (0, 0)  # Stop movement while waiting
 
@@ -303,11 +290,9 @@ class BotStateMachine:
         global first_lidar_data
 
         if lidar_data is None:
-            print("Debug: No LiDAR data provided.")
             return (0, 0)
 
         if first_lidar_data is None:
-            print("Debug: Storing initial LiDAR data.")
             first_lidar_data = lidar_data
             return self.wait(self.state, waitTime=0.5)  # Wait for 0.5 seconds before the next scan 
 
@@ -324,18 +309,13 @@ class BotStateMachine:
                 driving_forward = True
 
 
-        print("Debug: Checking if object is getting closer.")
         if LidarProcessor.is_object_getting_closer(first_lidar_data, lidar_data, direction_is_front=driving_forward):
-            print("Debug: Object detected in front, stopping the bot.")
             first_lidar_data = lidar_data  # Update the first LiDAR data
             return self.wait(self.state, waitTime=0.5)
         else:
-            print("Debug: No object detected, continuing.")
             if self.state == BotState.CHECKING_TRAFFIC1:
-                print("Debug: Transitioning to POSITION_IN_COLOM.")
                 self.transition_to(BotState.POSITION_IN_COLOM)
             else:
-                print("Debug: Transitioning to RETURNING_TO_COLOM.")
                 self.transition_to(BotState.RETURNING_TO_COLOM)
             return (0, 0)
         

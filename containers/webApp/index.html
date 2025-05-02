@@ -23,7 +23,7 @@
             <!-- Rows will be dynamically populated -->
         </tbody>
     </table>
-    <img src="image/localization_visualization.png" alt="Afbeelding" style="width:100%;max-width:600px;">
+    <canvas id="mapCanvas"  style="border:  2px solid #000; border-radius: 5px; width: 1500px; height: 1800px;"></canvas>
     
 </body>
 
@@ -74,21 +74,30 @@
         }
     }
     function reloadImage() {
-        const timestamp = new Date().getTime(); // Unieke timestamp
-        const originalSrc = "image/localization_visualization.png";
-        const newSrc = `${originalSrc}?t=${timestamp}`;
         
-        fetch(newSrc)
+        fetch(`${apiBaseUrl}/vizualizeBots`)
             .then(response => {
-            if (response.ok) {
-                imageElement.src = newSrc; // Update naar nieuwe afbeelding
-            } else {
-                throw new Error("Afbeelding niet gevonden");
+            if (!response.ok) {
+                throw new Error("Failed to fetch visualization");
             }
+            return response.blob();
             })
-            .catch(() => {
-            imageElement.src = originalSrc; // Blijf de oude afbeelding tonen
+            .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const canvas = document.getElementById("mapCanvas");
+            const ctx = canvas.getContext("2d");
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+            })
+            .catch(error => {
+            console.error("Error fetching visualization:", error);
             });
+        
     }
 
     // Fetch tasks every 5 seconds
