@@ -1,7 +1,7 @@
 import math
 
 class LidarProcessor:
-    def __init__(self, max_distance=10.0, angle_range=60):
+    def __init__(self, max_distance=10.0, angle_range=80):
         """
         Initialize the LidarProcessor with a maximum valid distance and angle range.
         :param max_distance: Maximum valid distance for LiDAR measurements.

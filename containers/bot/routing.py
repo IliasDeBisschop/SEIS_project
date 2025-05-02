@@ -28,9 +28,9 @@ wait_end_time = 0
 max_speed = 6.67  # Maximum speed of the bot in cm/s
 max_turn_speed = 5  # Maximum turning speed in rad/s
 first_lidar_data = None  # Placeholder for the first LiDAR data
-LidarProcessor = LidarProcessor(max_distance=10.0, angle_range=60)  # Initialize the LidarProcessor
-start_top_shelfs = 5.5  # Starting point for top shelves
-start_bottom_shelfs = 3.5  # Starting point for bottom shelves
+LidarProcessor = LidarProcessor(max_distance=10.0)  # Initialize the LidarProcessor
+start_top_shelfs = 5.35  # Starting point for top shelves
+start_bottom_shelfs = 3.65  # Starting point for bottom shelves
 bot_id = None  # Placeholder for bot ID
 
 class BotStateMachine:
@@ -50,7 +50,19 @@ class BotStateMachine:
         else:
             print("Failed to register bot.")
             raise Exception("Bot registration failed.")
+        
 
+    def bot_stuck(self):
+        SERVER_URL = "http://server:5000"  # Server URL
+        response = requests.post(f"{SERVER_URL}/bot/stuck", json={"bot_id": self.bot_id})
+        if response.status_code == 200:
+            print(f"confirmed stuck")
+            return 1
+        else:
+            print("Failed to stuck")
+            return 0
+
+        
     def transition_to(self, new_state):
         if not isinstance(new_state, BotState):
             raise ValueError("Invalid state")
