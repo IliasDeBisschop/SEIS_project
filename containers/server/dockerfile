@@ -2,7 +2,7 @@
 FROM python:3.9-slim
 
 # Install Flask and Requests
-RUN pip install flask requests
+RUN pip install flask requests flask-cors
 
 # Set the working directory
 WORKDIR /app

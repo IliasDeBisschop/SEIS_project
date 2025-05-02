@@ -1,7 +1,5 @@
 services:
-  
   bot1:
-    container_name: bot1
     build:
       context: ./bot
       dockerfile: dockerfile
@@ -9,31 +7,36 @@ services:
     tty: true
     ports:
       - "5001:5001"  # Expose port 5000 in the container as 5001 on the host
+      - "5002:5002"  # Expose port 5002 in the container as 5002 on the host
+    volumes:
+       - ./bot1_output:/app/output  # Use a named volume for the output folder
+    container_name: bot1
 
-  # bot2:
-  #   build:
-  #     context: ./bot
-  #     dockerfile: dockerfile
-  #   volumes:
-  #     - ../controllers:/app/controllers
-  #   stdin_open: true
-  #   tty: true
-  #   ports:
-  #     - "5002:5000"  # Expose port 5000 in the container as 5002 on the host
+  bot2:
+    build:
+      context: ./bot
+      dockerfile: dockerfile
+    stdin_open: true
+    tty: true
+    ports:
+      - "5003:5001"  # Expose port 5000 in the container as 5001 on the host
+    volumes:
+       - ./bot2_output:/app/output  # Use a named volume for the output folder
+    container_name: bot2
 
-  # bot3:
-  #   build:
-  #     context: ./bot
-  #     dockerfile: dockerfile
-  #   volumes:
-  #     - ../controllers:/app/controllers
-  #   stdin_open: true
-  #   tty: true
-  #   ports:
-  #     - "5003:5000"  # Expose port 5000 in the container as 5003 on the host
+  bot3:
+    build:
+      context: ./bot
+      dockerfile: dockerfile
+    stdin_open: true
+    tty: true
+    ports:
+      - "5005:5001"  # Expose port 5000 in the container as 5001 on the host
+    volumes:
+       - ./bot3_output:/app/output  # Use a named volume for the output folder
+    container_name: bot3
 
   server:
-    container_name: server
     build:
       context: ./server
       dockerfile: dockerfile
@@ -43,5 +46,19 @@ services:
       - "5000:5000"  # Expose port 5000 for the server
     depends_on:
       - bot1
-      # - bot2
-      # - bot3
+      - bot2
+      - bot3
+    container_name: server
+  webapp:
+    image: nginx:latest
+    container_name: webapp
+    ports:
+      - "8080:80"  # Expose port 80 in the container as 8080 on the host
+    volumes:
+      - ./bot1_output:/usr/share/nginx/html/image
+      - ./webapp:/usr/share/nginx/html  # Mount the webapp directory to the nginx html directory
+      - ./webApp/nginx.conf:/etc/nginx/conf.d/default.conf # Voeg deze regel toe
+    depends_on:
+      - server
+volumes:
+  bot1_output:

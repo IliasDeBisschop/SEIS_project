@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App</title>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+    <h1>Welkom bij de Web App</h1>
+    <h1>Robot Task Tracker</h1>
+    <button onclick="sendCommandToRobot()">robot stopen/starten</button>
+    <button onclick="window.location.href='tasks.html'">Bekijk Taken</button>
+    <table>
+        <thead>
+            <tr>
+                <th>Robot ID</th>
+                <th>Current Task</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="taskTable">
+            <!-- Rows will be dynamically populated -->
+        </tbody>
+    </table>
+    <img src="image/localization_visualization.png" alt="Afbeelding" style="width:100%;max-width:600px;">
+    
+</body>
+
+<script>
+    const botEndpoints = ["bot1", "bot2", "bot3"];
+    const apiBaseUrl = "http://localhost:5000";
+    const imageElement = document.querySelector("img");
+    
+    async function fetchBotTasks() {
+        const tableBody = document.getElementById("taskTable");
+        tableBody.innerHTML = ""; // Clear existing rows
+
+        for (const botId of botEndpoints) {
+            try {
+                const response = await fetch(`${apiBaseUrl}/bot/${botId}/get_bot_task`); // Updated endpoint
+                if (!response.ok) {
+                    throw new Error("Bot not reachable");
+                }
+                const data = await response.json();
+
+                const row = document.createElement("tr");
+                let task, status;
+
+                if (data.error) {
+                    task = "No task assigned";
+                    status = "Waiting";
+                } else {
+                    // Format task as a tuple (row, column)
+                    task = `(${data.task.row}, ${data.task.column})`;
+                    status = "Active";
+                }
+
+                row.innerHTML = `
+                    <td>${botId}</td>
+                    <td>${task}</td>
+                    <td>${status}</td>
+                `;
+                tableBody.appendChild(row);
+            } catch (error) {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${botId}</td>
+                    <td>No task</td>
+                    <td>No connection</td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+    }
+    function reloadImage() {
+        const timestamp = new Date().getTime(); // Unieke timestamp
+        const originalSrc = "image/localization_visualization.png";
+        const newSrc = `${originalSrc}?t=${timestamp}`;
+        
+        fetch(newSrc)
+            .then(response => {
+            if (response.ok) {
+                imageElement.src = newSrc; // Update naar nieuwe afbeelding
+            } else {
+                throw new Error("Afbeelding niet gevonden");
+            }
+            })
+            .catch(() => {
+            imageElement.src = originalSrc; // Blijf de oude afbeelding tonen
+            });
+    }
+
+    // Fetch tasks every 5 seconds
+    setInterval(fetchBotTasks, 5000);
+    setInterval(reloadImage, 5000);
+    fetchBotTasks();
+    reloadImage(); 
+    function sendCommandToRobot() {
+        console.log("Sending command to robot...");
+        fetch("http://localhost:5002/control", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+        .catch(error => {
+            console.error("Error sending command:", error);
+        });
+    }
+</script>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+    }
+    th {
+        background-color: #f4f4f4;
+    }
+    img {
+        border: 2px solid #000; /* Zwarte border van 2px */
+        border-radius: 5px; /* Optioneel: afgeronde hoeken */
+    }
+</style>
+</html>

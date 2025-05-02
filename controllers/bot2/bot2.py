@@ -24,7 +24,7 @@ left_motor.setPosition(float('inf'))
 right_motor.setPosition(float('inf'))
 
 # WebSocket configuration
-WS_URL = "ws://127.0.0.1:5001"  # WebSocket server address
+WS_URL = "ws://127.0.0.1:5003"  # WebSocket server address
 
 def connect_to_container():
     """Establish a WebSocket connection to the container."""
