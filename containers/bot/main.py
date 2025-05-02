@@ -54,7 +54,8 @@ async def handle_connection(websocket, path):
             motor_commands = bot_state_machine.handle_event(
                 event="start",  # Example event; replace with actual event logic
                 bot_coordinates=(x, y),
-                angle=angle
+                angle=angle,
+                lidar_data=data["lidar"]  # Assuming lidar_data is part of the received data
             )
 
             # Send motor commands back to the bot
