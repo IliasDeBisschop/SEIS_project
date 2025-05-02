@@ -44,47 +44,44 @@ class BotStateMachine:
         print(f"Transitioning from {self.state.name} to {new_state.name}")
         self.state = new_state
 
-    def handle_event(self, event, bot_coordinates=None, angle=None,lidar_data=None):
+    def handle_event(self, event, bot_coordinates=None, angle=None, lidar_data=None):
         """
         Handle events by calling the appropriate state-specific function based on the current state.
         """
-
         global wait_end_time
-
+    
         # Check if the bot is still waiting
         if time.time() < wait_end_time:
             print("Still waiting...")
             return (0, 0)  # Stop movement while waiting
-
-        if self.state == BotState.GET_TASK:
-            return self.get_task()
-        elif self.state == BotState.POSITION_IN_ROW:
-            return self.position_in_row(bot_coordinates=bot_coordinates)
-        elif self.state == BotState.POSITION_IN_COLOM:
-            return self.position_in_colom(bot_coordinates=bot_coordinates)
-        elif self.state == BotState.PICKUP_ITEM:
-            return self.pickup_item()
-        elif self.state == BotState.RETURNING_TO_COLOM:
-            return self.returning_to_colom(bot_coordinates=bot_coordinates)
-        elif self.state == BotState.RETURNING_TO_STATION:
-            return self.returning_to_station(bot_coordinates=bot_coordinates)
-        elif self.state == BotState.WAITING:
-            return self.wait(BotState.WAITING)
-        elif self.state == BotState.RESOLVING_CONFLICT:
-            return self.resolving_conflict()
-        elif self.state == BotState.TURN_VERTICAL:
-            return self.turn_vertical(bot_coordinates=bot_coordinates, angle=angle)
-        elif self.state == BotState.TURN_HORIZONTAL:
-            return self.turn_horizontal(bot_coordinates=bot_coordinates, angle=angle)
-        elif self.state == BotState.CHECKING_TRAFFIC1:
-            return self.check_for_traffic(bot_coordinates=bot_coordinates,lidar_data=lidar_data)
-        elif self.state == BotState.CHECKING_TRAFFIC2:
-            return self.check_for_traffic(bot_coordinates=bot_coordinates,lidar_data=lidar_data)
-        elif self.state == BotState.RETURN_HALL:
-            return self.return_hall(bot_coordinates=bot_coordinates)
-        else:
-            print(f"No action defined for state {self.state.name}")
-            return (0, 0)  # Default motor speeds (stop)
+    
+        # Define a dictionary mapping states to their corresponding methods
+        state_actions = {
+            BotState.GET_TASK: lambda: self.get_task(),
+            BotState.POSITION_IN_ROW: lambda: self.position_in_row(bot_coordinates=bot_coordinates),
+            BotState.POSITION_IN_COLOM: lambda: self.position_in_colom(bot_coordinates=bot_coordinates),
+            BotState.PICKUP_ITEM: lambda: self.pickup_item(),
+            BotState.RETURNING_TO_COLOM: lambda: self.returning_to_colom(bot_coordinates=bot_coordinates),
+            BotState.RETURNING_TO_STATION: lambda: self.returning_to_station(bot_coordinates=bot_coordinates),
+            BotState.WAITING: lambda: self.wait(BotState.WAITING),
+            BotState.RESOLVING_CONFLICT: lambda: self.resolving_conflict(),
+            BotState.TURN_VERTICAL: lambda: self.turn_vertical(bot_coordinates=bot_coordinates, angle=angle),
+            BotState.TURN_HORIZONTAL: lambda: self.turn_horizontal(bot_coordinates=bot_coordinates, angle=angle),
+            BotState.CHECKING_TRAFFIC1: lambda: self.check_for_traffic(bot_coordinates=bot_coordinates, lidar_data=lidar_data),
+            BotState.CHECKING_TRAFFIC2: lambda: self.check_for_traffic(bot_coordinates=bot_coordinates, lidar_data=lidar_data),
+            BotState.RETURN_HALL: lambda: self.return_hall(bot_coordinates=bot_coordinates),
+        }
+    
+        # Call the appropriate function based on the current state
+        action = state_actions.get(self.state, lambda: self.default_action())
+        return action()
+    
+    def default_action(self):
+        """
+        Default action for undefined states.
+        """
+        print(f"No action defined for state {self.state.name}")
+        return (0, 0)  # Default motor speeds (stop)
 
     def get_task(self):
         global task
