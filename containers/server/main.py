@@ -10,6 +10,7 @@ ROWS = 20  # Example: Total number of rows
 COLUMNS = 6  # Example: Total number of columns
 INTERVAL = 10  # Example: Frequency of task generation in seconds
 MAX_TASKS = 3  # Maximum number of tasks to generate per interval
+max_tasks = 20  # Maximum number of tasks in que
 
 bot_rows = {
     "bot1": None,
@@ -50,11 +51,16 @@ def generate_tasks_at_interval():
     """Generate a random number of tasks at a specified interval."""
     global tasks
     while True:
-        num_tasks = random.randint(0, MAX_TASKS)  # Random number of tasks
-        new_tasks = [generate_random_task() for _ in range(num_tasks)]
-        tasks.extend(new_tasks)
-        print(f"Generated {num_tasks} tasks: {new_tasks}")
-        print (f"Current tasks: {tasks}")
+        if len(tasks) >= max_tasks:  # Check if the queue has reached the maximum limit
+            print(f"Task queue is full ({len(tasks)} tasks). No new tasks generated.")
+        else:
+            num_tasks = random.randint(0, MAX_TASKS)  # Random number of tasks
+            if num_tasks > max_tasks - len(tasks):
+                num_tasks = max_tasks - len(tasks)
+            new_tasks = [generate_random_task() for _ in range(num_tasks)]
+            tasks.extend(new_tasks)
+            print(f"Generated {num_tasks} tasks: {new_tasks}")
+            print(f"Current tasks: {tasks}")
         time.sleep(INTERVAL)  # Wait for the next interval
 
 # Map container IP addresses to container names
