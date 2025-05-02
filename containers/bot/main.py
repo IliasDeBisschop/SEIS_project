@@ -17,7 +17,7 @@ iteration = 0
 stuck_counter = 0  # Counter for stuck detection
 
 app = Flask(__name__)
-CORS(app)  # Sta alle origins toe
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["GET", "POST", "OPTIONS"])  # Sta alle origins toe
 
 @app.route("/control", methods=["POST"])
 def control_robot():
@@ -61,7 +61,6 @@ async def handle_connection(websocket, path):
             if stuck_counter == -1:
                 motor_commands = [0, 0]
             elif motor_commands[0] < 0 and motor_commands[1] < 0:
-                print(data["lidar"][0])
                 if data["lidar"][0] < 0.2:
                     motor_commands = [0,0]
                     stuck_counter += 1
@@ -70,7 +69,6 @@ async def handle_connection(websocket, path):
  
             elif motor_commands[0] > 0 and motor_commands[1] > 0:
                 middle_index = len(data["lidar"]) // 2
-                print(data["lidar"][middle_index])
                 if data["lidar"][middle_index] < 0.2:
                     motor_commands = [0,0]
                     stuck_counter += 1  

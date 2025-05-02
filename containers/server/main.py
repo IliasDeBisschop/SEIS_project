@@ -329,6 +329,22 @@ def vizualize_bots():
 
     return jsonify(bot_coordinates)
 
+@app.route("/bot/<bot_id>/control", methods=["POST"])
+def control_bot(bot_id):
+    """Forward control command to the specified bot."""
+    if bot_id not in BOT_ENDPOINTS:
+        return jsonify({"error": "Invalid bot ID"}), 400
+    print(f"Control command received for {bot_id}.")
+    try:
+        # Forward the control command to the bot
+        response = requests.post(f"{BOT_ENDPOINTS[bot_id]}/control", timeout=5)
+        if response.status_code == 200:
+            return jsonify({"message": f"Command sent to {bot_id} successfully."}), 200
+        else:
+            return jsonify({"error": f"Failed to send command to {bot_id} (status code: {response.status_code})"}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Failed to connect to {bot_id}: {str(e)}"}), 500
+
 @app.route("/")
 def home():
     return "Server is running and connected to bots!"

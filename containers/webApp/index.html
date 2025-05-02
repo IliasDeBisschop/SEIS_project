@@ -17,6 +17,7 @@
                 <th>Robot ID</th>
                 <th>Current Task</th>
                 <th>Status</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody id="taskTable">
@@ -65,6 +66,7 @@
                     <td>${botId}</td>
                     <td>${task}</td>
                     <td>${status}</td>
+                    <td><button onclick="stopRobot('${botId}')">Stop</button></td>
                 `;
                 tableBody.appendChild(row);
             } catch (error) {
@@ -73,6 +75,7 @@
                     <td>${botId}</td>
                     <td>No task</td>
                     <td>No connection</td>
+                    <td><button onclick="stopRobot('${botId}')">Stop</button></td>
                 `;
                 tableBody.appendChild(row);
             }
@@ -102,15 +105,40 @@
     reloadImage(); 
     function sendCommandToRobot() {
         console.log("Sending command to robot...");
-        fetch("http://localhost:5002/control", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        })
-        .catch(error => {
-            console.error("Error sending command:", error);
-        });
+        for (const botId of botEndpoints) {
+            fetch(`${apiBaseUrl}/bot/${botId}/control`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to send command to ${botId}`);
+                }
+                console.log(`Command sent to ${botId} successfully.`);
+            })
+            .catch(error => {
+                console.error(`Error sending command to ${botId}:`, error);
+            });
+        }
+    }
+    function stopRobot(botId) {
+        fetch(`${apiBaseUrl}/bot/${botId}/control`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to send command to ${botId}`);
+                }
+                console.log(`Command sent to ${botId} successfully.`);
+            })
+            .catch(error => {
+                console.error(`Error sending command to ${botId}:`, error);
+            });
     }
 </script>
 <style>
