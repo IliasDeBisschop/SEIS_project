@@ -104,7 +104,6 @@ def register_bot():
 def get_task():
     """Assign the oldest task to a bot based on its bot_id."""
     global tasks, bot_tasks
-    headers = {"X-Bot-Name": "bot1"}
     # Extract the bot_id from the query parameters
     bot_id = request.args.get("bot_id")
     if not bot_id or bot_id not in bot_tasks:
@@ -113,26 +112,16 @@ def get_task():
 
     print(f"Task request from bot: {bot_id}")
 
-    # First, try to find a task in a row where no other bot is working
+    # Probeer een taak toe te wijzen
     for task in tasks:
         row, column = task
-        if all(assigned_task is None or assigned_task[0]%10 != row%10 for assigned_task in bot_tasks.values()):  # Check if the row is free
-            # Assign the task to the bot
+        if all(assigned_task is None or assigned_task[0] % 10 != row % 10 for assigned_task in bot_tasks.values()):
             bot_tasks[bot_id] = task
-            tasks.remove(task)  # Remove the task from the list
+            tasks.remove(task)
             x_cord, y_cord = getWorldCoordinates(row, column)
             print(f"##### Bot {bot_id} assigned to task at row {row}, column {column} (world coordinates: {x_cord}, {y_cord})")
             return jsonify({"task": {"x": x_cord, "y": y_cord, "end_x": bot_hall_cordinates[bot_id][0], "end_y": bot_hall_cordinates[bot_id][1]}})
 
-    # If no free rows are available, assign the oldest task regardless of row
-    if tasks:
-        task = tasks.pop(0)  # Get and remove the oldest task
-        row, column = task
-        bot_tasks[bot_id] = task  # Assign the full task to the bot
-        x_cord, y_cord = getWorldCoordinates(row, column)
-        return jsonify({"task": {"x": x_cord, "y": y_cord, "end_x": bot_hall_cordinates[bot_id][0], "end_y": bot_hall_cordinates[bot_id][1]}})
-
-    # If no tasks are available at all, return an error
     return jsonify({"error": "No available tasks"}), 404
 
 @app.route("/bot/<bot_id>/complete_task", methods=["POST"])

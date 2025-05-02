@@ -46,8 +46,8 @@ services:
       - "5000:5000"  # Expose port 5000 for the server
     depends_on:
       - bot1
-      # - bot2
-      # - bot3
+      - bot2
+      - bot3
     container_name: server
   webapp:
     image: nginx:latest

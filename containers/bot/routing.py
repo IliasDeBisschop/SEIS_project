@@ -83,7 +83,7 @@ class BotStateMachine:
             BotState.CHECKING_TRAFFIC1: lambda: self.check_for_traffic(bot_coordinates=bot_coordinates, lidar_data=lidar_data),
             BotState.CHECKING_TRAFFIC2: lambda: self.check_for_traffic(bot_coordinates=bot_coordinates, lidar_data=lidar_data),
             BotState.RETURN_HALL: lambda: self.return_hall(bot_coordinates=bot_coordinates),
-            BotState.WAITING_FROM_WEBAPP: lambda: return (0, 0)  # Stop the bot while waiting for web app command
+            BotState.WAITING_FROM_WEBAPP: lambda: (0, 0)  # Stop the bot while waiting for web app command
         }
     
         # Call the appropriate function based on the current state
