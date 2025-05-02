@@ -6,6 +6,6 @@ minimizedPerspectives: 000000ff00000000fd00000003000000000000000000000000fc01000
 maximizedDockId: -1
 centralWidgetVisible: 1
 orthographicViewHeight: 1
-textFiles: 0 "bot.py"
+textFiles: 1 "controllers/bot/bot.py" "bot2.py"
 globalOptionalRendering: LidarPointClouds::LidarRaysPaths
 consoles: Console:All:All
