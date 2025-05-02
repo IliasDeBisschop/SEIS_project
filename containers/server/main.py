@@ -26,6 +26,11 @@ bot_hall_cordinates = {
     "bot2": (0.25, 4.5),
     "bot3": (0.25, 3.9),
 }
+bot_stuck_status = {
+    "bot1": False,
+    "bot2": False,
+    "bot3": False,
+}
 
 # Global list to store tasks
 tasks = []
@@ -137,6 +142,26 @@ def complete_task(bot_id):
     bot_tasks[bot_id] = None
     print(f"Bot {bot_id} has completed its task.")
     return jsonify({"message": f"Bot {bot_id} has completed its task and is now free."})
+
+@app.route("/bot/stuck", methods=["POST"])
+def bot_stuck():
+    """Mark a bot as stuck."""
+    global bot_stuck_status  # Use the updated dictionary name
+
+    # Get the bot_id from the request
+    data = request.json
+    bot_id = data.get("bot_id")
+
+    if not bot_id or bot_id not in bot_stuck_status:
+        print(f"Error: Invalid bot ID: {bot_id}")
+        return jsonify({"error": f"Invalid bot ID: {bot_id}"}), 400
+
+    # Mark the bot as stuck
+    print(f"Bot {bot_id} reported as stuck.")
+    bot_stuck_status[bot_id] = True  # Set the bot's stuck status to True
+
+    return jsonify({"message": f"Bot {bot_id} has been marked as stuck."}), 200
+
 
 @app.route("/tasks", methods=["GET"])
 def get_all_tasks():

@@ -13,6 +13,7 @@ from flask_cors import CORS  # Import CORS
 task = None  
 bot_state_machine = BotStateMachine()
 iteration = 0  
+stuck_counter = 0  # Counter for stuck detection
 
 app = Flask(__name__)
 CORS(app)  # Sta alle origins toe
@@ -57,17 +58,32 @@ async def handle_connection(websocket, path):
                 angle=angle,
                 lidar_data=data["lidar"]  # Assuming lidar_data is part of the received data
             )
+            global stuck_counter
             # Check motor speeds and lidar data
-            if motor_commands[0] < 0 and motor_commands[1] < 0:
+            if stuck_counter == -1:
+                motor_commands = [0, 0]
+            elif motor_commands[0] < 0 and motor_commands[1] < 0:
                 print(data["lidar"][0])
                 if data["lidar"][0] < 0.2:
                     motor_commands = [0,0]
+                    stuck_counter += 1
+                else:
+                    stuck_counter = 0
  
             elif motor_commands[0] > 0 and motor_commands[1] > 0:
                 middle_index = len(data["lidar"]) // 2
                 print(data["lidar"][middle_index])
                 if data["lidar"][middle_index] < 0.2:
                     motor_commands = [0,0]
+                    stuck_counter += 1  
+                else:
+                    stuck_counter = 0
+            if stuck_counter > 100:
+                print("Stuck detected!")
+                stuck_counter = 0
+                succes =bot_state_machine.bot_stuck()
+                if succes:
+                    stuck_counter = -1
             # Send motor commands back to the bot
             motor_commands_json = {
 

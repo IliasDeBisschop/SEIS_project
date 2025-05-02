@@ -50,7 +50,19 @@ class BotStateMachine:
         else:
             print("Failed to register bot.")
             raise Exception("Bot registration failed.")
+        
 
+    def bot_stuck(self):
+        SERVER_URL = "http://server:5000"  # Server URL
+        response = requests.post(f"{SERVER_URL}/bot/stuck", json={"bot_id": self.bot_id})
+        if response.status_code == 200:
+            print(f"confirmed stuck")
+            return 1
+        else:
+            print("Failed to stuck")
+            return 0
+
+        
     def transition_to(self, new_state):
         if not isinstance(new_state, BotState):
             raise ValueError("Invalid state")
