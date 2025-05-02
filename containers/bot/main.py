@@ -7,10 +7,11 @@ from localization import GPSLocalization
 from routing import BotStateMachine
 from flask import Flask, request, jsonify
 import threading
-from concurrent.futures import ThreadPoolExecutor  # Import ThreadPoolExecutor
 from flask_cors import CORS  # Import CORS
 
+
 task = None  
+gps_localization = GPSLocalization()
 bot_state_machine = BotStateMachine()
 iteration = 0  
 stuck_counter = 0  # Counter for stuck detection
@@ -23,13 +24,16 @@ def control_robot():
     bot_state_machine.webAppControl()
     return jsonify({"message": "Control command received."})
 
-# ThreadPoolExecutor for running visualization in a separate thread
-executor = ThreadPoolExecutor(max_workers=1)
+@app.route("/coordinates", methods=["GET"])
+def get_coordinates():
+    """Return the current coordinates of the robot."""
+    # Hier kun je de logica toevoegen om de huidige coördinaten van de robot te berekenen
+    x, y = gps_localization.getCoordinates()
+    return jsonify({"x": x, "y": y})
 
 async def handle_connection(websocket, path):
     print("Bot connected.")
     # Initialize the GPS localization system
-    gps_localization = GPSLocalization("image_low_pixels.png")
      
     try:
         while True:
@@ -43,13 +47,6 @@ async def handle_connection(websocket, path):
             # Extract angle and coordinates
             angle = gps_localization.angle_calculator(data)
             x, y = gps_localization.calculate_coordinates(data)
-
-            # Run visualization every 5th iteration
-            global iteration
-            iteration = (iteration + 1) % 5
-            if iteration == 0:
-                # Use ThreadPoolExecutor to run visualization in a separate thread
-                executor.submit(gps_localization.visualize_localization, data)
 
             # Handle the event and get motor commands
             motor_commands = bot_state_machine.handle_event(
