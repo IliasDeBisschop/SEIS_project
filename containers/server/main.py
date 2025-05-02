@@ -39,8 +39,8 @@ tasks = []
 # Define the bot endpoints
 BOT_ENDPOINTS = {
     "bot1": "http://bot1:5002",
-    "bot2": "http://bot2:5004",
-    "bot3": "http://bot3:5006",
+    "bot2": "http://bot2:5002",
+    "bot3": "http://bot3:5002",
 }
 def getWorldCoordinates(row, column):
     """Convert (row, column) to world coordinates."""
@@ -246,37 +246,42 @@ def vizualize_bots():
                 })
                 print(f"Bot {bot_id} coordinates: {data.get('x')}, {data.get('y')}")
             else:
+                print(f"Failed to retrieve coordinates for {bot_id}: {response.status_code}")
                 bot_coordinates.append({
                     "bot_id": bot_id,
                     "error": f"Failed to retrieve coordinates (status code: {response.status_code})"
                 })
         except requests.exceptions.RequestException as e:
+            print(f"Error connecting to {bot_id}: {str(e)}")
             bot_coordinates.append({
                 "bot_id": bot_id,
                 "error": f"Failed to connect to bot endpoint: {str(e)}"
             })
-            map_image = cv2.imread(map_image_path, cv2.IMREAD_COLOR)
-            if map_image is None:
-                raise FileNotFoundError(f"Map image '{map_image_path}' not found or cannot be read.")
-            colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0)]  # Red, Green, Blue
 
-            for index, bot in enumerate(bot_coordinates):
-                if "x" in bot and "y" in bot:
-                    # Calculate pixel coordinates
-                    pixel_x = bot["x"]
-                    pixel_y = bot["y"]
-                    # Draw the robot's position as a dot with a unique color
-                    color = colors[index % len(colors)]  # Cycle through the colors
+    # Load the map image
+    map_image = cv2.imread(map_image_path, cv2.IMREAD_COLOR)
+    if map_image is None:
+        raise FileNotFoundError(f"Map image '{map_image_path}' not found or cannot be read.")
 
-                    cv2.circle(map_image, (int(pixel_x * 200), int(1800 - pixel_y * 200)), 20, color, -1)  # Dot with radius 10 pixels
+    # Define colors for the bots
+    colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0)]  # Red, Green, Blue
 
-            # Save the visualization
-            success = cv2.imwrite(output_path, map_image)
-            if not success:
-                print(f"Failed to save the image to {output_path}")
-    return jsonify(bot_coordinates) 
+    # Draw the bots on the map
+    for index, bot in enumerate(bot_coordinates):
+        if "x" in bot and "y" in bot:
+            # Calculate pixel coordinates
+            pixel_x = bot["x"]
+            pixel_y = bot["y"]
+            # Draw the robot's position as a dot with a unique color
+            color = colors[index % len(colors)]  # Cycle through the colors
+            cv2.circle(map_image, (int(pixel_x * 200), int(1800 - pixel_y * 200)), 20, color, -1)  # Dot with radius 10 pixels
 
-    
+    # Save the visualization
+    success = cv2.imwrite(output_path, map_image)
+    if not success:
+        print(f"Failed to save the image to {output_path}")
+
+    return jsonify(bot_coordinates)
 
 @app.route("/")
 def home():
