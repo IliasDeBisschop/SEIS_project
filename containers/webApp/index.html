@@ -52,10 +52,13 @@
                 } else {
                     if (data.bot_status) {
                         row.style.backgroundColor = "red";
+                        status = "blocked";
+                    }
+                    else{
+                        status = "Active";
                     }
                     // Format task as a tuple (row, column)
                     task = `(${data.task.row}, ${data.task.column})`;
-                    status = "Active";
                 }
 
                 row.innerHTML = `
