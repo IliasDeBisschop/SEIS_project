@@ -36,7 +36,7 @@
 
         for (const botId of botEndpoints) {
             try {
-                const response = await fetch(`${apiBaseUrl}/bot/${botId}/get_task`);
+                const response = await fetch(`${apiBaseUrl}/bot/${botId}/get_bot_task`); // Updated endpoint
                 if (!response.ok) {
                     throw new Error("Bot not reachable");
                 }
@@ -49,7 +49,8 @@
                     task = "No task assigned";
                     status = "Waiting";
                 } else {
-                    task = `X: ${data.task.x}, Y: ${data.task.y}`;
+                    // Format task as a tuple (row, column)
+                    task = `(${data.task.row}, ${data.task.column})`;
                     status = "Active";
                 }
 
@@ -94,6 +95,7 @@
     fetchBotTasks();
     reloadImage(); 
     function sendCommandToRobot() {
+        console.log("Sending command to robot...");
         fetch("http://localhost:5002/control", {
             method: "POST",
             headers: {

@@ -1,17 +1,19 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import random
 import threading
 import time
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all origins
 
 ROWS = 20  # Example: Total number of rows
 COLUMNS = 6  # Example: Total number of columns
 INTERVAL = 10  # Example: Frequency of task generation in seconds
 MAX_TASKS = 3  # Maximum number of tasks to generate per interval
 
-bot_rows = {
+bot_tasks = {
     "bot1": None,
     "bot2": None,
     "bot3": None,
@@ -57,11 +59,22 @@ def generate_tasks_at_interval():
         print (f"Current tasks: {tasks}")
         time.sleep(INTERVAL)  # Wait for the next interval
 
+@app.route("/bot/<bot_id>/get_bot_task", methods=["GET"])
+def get_bot_task(bot_id):
+    """Get the current task for a specific bot."""
+    if bot_id not in BOT_ENDPOINTS:
+        return jsonify({"error": "Invalid bot ID"}), 400
+
+    # Check if the bot has a task assigned
+    task = bot_tasks.get(bot_id)
+    if task is not None:
+        return jsonify({"task": {"row": task[0], "column": task[1]}})
+    return jsonify({"error": "No task assigned to this bot"}), 404
 
 @app.route("/bot/<bot_id>/get_task", methods=["GET"])
 def get_task(bot_id):
     """Assign the oldest task to a bot. Prefer tasks in rows where no other bot is working, but fall back to any task if necessary."""
-    global tasks, bot_rows
+    global tasks, bot_tasks
 
     if bot_id not in BOT_ENDPOINTS:
         return jsonify({"error": "Invalid bot ID"}), 400
@@ -69,9 +82,9 @@ def get_task(bot_id):
     # First, try to find a task in a row where no other bot is working
     for task in tasks:
         row, column = task
-        if row not in bot_rows.values():  # Check if the row is free
+        if all(assigned_task is None or assigned_task[0] != row for assigned_task in bot_tasks.values()):  # Check if the row is free
             # Assign the task to the bot
-            bot_rows[bot_id] = row
+            bot_tasks[bot_id] = task
             tasks.remove(task)  # Remove the task from the list
             x_cord, y_cord = getWorldCoordinates(row, column)
             print(f"##### Bot {bot_id} assigned to task at row {row}, column {column} (world coordinates: {x_cord}, {y_cord})")
@@ -81,23 +94,23 @@ def get_task(bot_id):
     if tasks:
         task = tasks.pop(0)  # Get and remove the oldest task
         row, column = task
-        bot_rows[bot_id] = row  # Assign the row to the bot
-        return jsonify({"task": {"row": row, "column": column}})
+        bot_tasks[bot_id] = task  # Assign the full task to the bot
+        x_cord, y_cord = getWorldCoordinates(row, column)
+        return jsonify({"task": {"x": x_cord, "y": y_cord, "end_x": bot_hall_cordinates[bot_id][0], "end_y": bot_hall_cordinates[bot_id][1]}})
 
     # If no tasks are available at all, return an error
     return jsonify({"error": "No available tasks"}), 404
 
-
 @app.route("/bot/<bot_id>/complete_task", methods=["POST"])
 def complete_task(bot_id):
-    """Mark a task as completed and free up the bot's row."""
-    global bot_rows
+    """Mark a task as completed and free up the bot's task."""
+    global bot_tasks
 
     if bot_id not in BOT_ENDPOINTS:
         return jsonify({"error": "Invalid bot ID"}), 400
 
-    # Free up the row for the bot
-    bot_rows[bot_id] = None
+    # Free up the task for the bot
+    bot_tasks[bot_id] = None
     return jsonify({"message": f"Bot {bot_id} has completed its task and is now free."})
 
 @app.route("/")

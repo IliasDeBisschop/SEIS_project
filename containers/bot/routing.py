@@ -34,7 +34,7 @@ class BotStateMachine:
     def transition_to(self, new_state):
         if not isinstance(new_state, BotState):
             raise ValueError("Invalid state")
-        print(f"Transitioning from {self.state.name} to {new_state.name}")
+        print(f"Transitioning from {self.state} to {new_state}")
         self.state = new_state
 
     def handle_event(self, event, bot_coordinates=None, angle=None):
@@ -130,7 +130,6 @@ class BotStateMachine:
             return (0, 0)
         desired_angle = 90  # Desired angle for vertical position
 
-        print(f"Desired angle: {desired_angle}, Current angle: {angle}")
         
         if abs(desired_angle-angle)<=treshold_angle:
             print("Turned to the correct angle.")
@@ -153,13 +152,11 @@ class BotStateMachine:
             self.transition_to(BotState.PICKUP_ITEM)
             return (0, 0)  # Stop motors
         elif (task["y"] <  bot_coordinates[1]):
-            print("distance is", (task["y"]-bot_coordinates[1]))
             if abs(task["y"]-bot_coordinates[1]) > 0.05:
                 return (-max_speed, -max_speed)
             return (-0.5, -0.5)
         
         if abs(task["y"]-bot_coordinates[1]) > 0.05:
-            print("distance is", (task["y"]-bot_coordinates[1]))
 
             return (max_speed, max_speed)
         return (0.5, 0.5)
@@ -180,13 +177,11 @@ class BotStateMachine:
             self.transition_to(BotState.TURN_HORIZONTAL)
             return (0, 0)  # Stop motors
         elif (task["end_y"] <  bot_coordinates[1]):
-            print("distance is", (task["end_y"]-bot_coordinates[1]))
             if abs(task["end_y"]-bot_coordinates[1]) > 0.05:
                 return (-max_speed, -max_speed)
             return (-0.5, -0.5)
         
         if abs(task["end_y"]-bot_coordinates[1]) > 0.05:
-            print("distance is", (task["end_y"]-bot_coordinates[1]))
 
             return (max_speed, max_speed)
         return (0.5, 0.5)
@@ -240,10 +235,11 @@ class BotStateMachine:
 
     def webAppControl(self):
         if self.previous_state is None:
+            print("waiting for webapp")
             self.previous_state = self.state 
-            self.state = BotState.WAITING_FROM_WEBAPP
+            self.transition_to(BotState.WAITING_FROM_WEBAPP)
         else:
-            self.state = self.previous_state
+            self.transition_to(self.previous_state)
             self.previous_state = None
 
 
